@@ -1,9 +1,9 @@
 # REM.jl
 
-[![Network Analysis](https://img.shields.io/badge/Network-Analysis-orange.svg)](https://github.com/Statistical-network-analysis-with-Julia/REM.jl)
-[![Build Status](https://github.com/Statistical-network-analysis-with-Julia/REM.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/Statistical-network-analysis-with-Julia/REM.jl/actions/workflows/CI.yml?query=branch%3Amain)
-[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://Statistical-network-analysis-with-Julia.github.io/REM.jl/stable/)
-[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://Statistical-network-analysis-with-Julia.github.io/REM.jl/dev/)
+[![Network Analysis](https://img.shields.io/badge/Network-Analysis-orange.svg)](https://github.com/statistical-network-analysis-with-Julia/REM.jl)
+[![Build Status](https://github.com/statistical-network-analysis-with-Julia/REM.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/statistical-network-analysis-with-Julia/REM.jl/actions/workflows/CI.yml?query=branch%3Amain)
+[![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://statistical-network-analysis-with-Julia.github.io/REM.jl/stable/)
+[![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://statistical-network-analysis-with-Julia.github.io/REM.jl/dev/)
 [![Julia](https://img.shields.io/badge/Julia-1.9+-purple.svg)](https://julialang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
@@ -28,7 +28,7 @@ REM.jl is a port of [eventnet](https://github.com/juergenlerner/eventnet), provi
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/Statistical-network-analysis-with-Julia/REM.jl")
+Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/REM.jl")
 ```
 
 ## Statistics Implemented
@@ -286,8 +286,8 @@ include("test/runtests.jl")
 
 For more detailed documentation, see:
 
-- [Stable Documentation](https://Statistical-network-analysis-with-Julia.github.io/REM.jl/stable/)
-- [Development Documentation](https://Statistical-network-analysis-with-Julia.github.io/REM.jl/dev/)
+- [Stable Documentation](https://statistical-network-analysis-with-Julia.github.io/REM.jl/stable/)
+- [Development Documentation](https://statistical-network-analysis-with-Julia.github.io/REM.jl/dev/)
 
 ## References
 

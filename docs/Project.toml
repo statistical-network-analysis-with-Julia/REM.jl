@@ -3,7 +3,7 @@ Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 REM = "f8e5b5a0-7c3d-4b5a-9c5e-1a2b3c4d5e6f"
 
 [sources]
-REM = {path = "/home/simon/githubRepos/REM.jl"}
+REM = {path = ".."}
 
 [compat]
 Documenter = "1"
