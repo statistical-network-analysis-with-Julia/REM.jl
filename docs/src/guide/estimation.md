@@ -53,6 +53,15 @@ The number of controls affects estimation accuracy and computation time:
 
 More controls = more accurate standard errors, but diminishing returns beyond ~100-200.
 
+Controls are sampled **without replacement**. If the actor set is small enough that fewer distinct dyads exist than `n_controls`, the sampler switches to the full risk set (all distinct non-event dyads) and warns once.
+
+!!! note "Ordinal likelihood"
+    REM.jl fits the *ordinal* REM: only event order enters the likelihood; the exact
+    inter-event waiting times are not part of the hazard (unlike `relevent::rem.dyad`'s
+    interval likelihood). Tied timestamps are ordered arbitrarily without a tie
+    correction. Standard errors are model-based (inverse information) from the sampled
+    risk set — the standard nested case-control variance.
+
 ## Generating Observations
 
 ```julia

@@ -41,6 +41,12 @@ mutable struct NetworkState{T}
     decay::Float64
     current_time::T
     event_history::Vector{Tuple{Int,Int,T,Float64}}  # (sender, receiver, time, weight)
+    # Incremental adjacency ("ever had an event"), so neighbor queries are
+    # O(degree) instead of O(|event_history|). Note membership never
+    # expires under decay: counts decay continuously, but structure counts
+    # any past event (documented eventnet behavior).
+    out_neighbors::Dict{Int, Set{Int}}
+    in_neighbors::Dict{Int, Set{Int}}
 
     function NetworkState{T}(; n_actors::Int=0, decay::Float64=0.0) where T
         new{T}(
@@ -53,7 +59,9 @@ mutable struct NetworkState{T}
             Dict{Tuple{Int,Int}, T}(),
             decay,
             zero(T),
-            Tuple{Int,Int,T,Float64}[]
+            Tuple{Int,Int,T,Float64}[],
+            Dict{Int, Set{Int}}(),
+            Dict{Int, Set{Int}}()
         )
     end
 end
@@ -81,6 +89,8 @@ function reset!(state::NetworkState{T}) where T
     empty!(state.in_degree)
     empty!(state.last_event_time)
     empty!(state.event_history)
+    empty!(state.out_neighbors)
+    empty!(state.in_neighbors)
     state.current_time = zero(T)
     return state
 end
@@ -119,6 +129,10 @@ function update!(state::NetworkState{T}, event::Event{T}) where T
 
     # Add to history
     push!(state.event_history, (s, r, t, w))
+
+    # Update incremental adjacency
+    push!(get!(state.out_neighbors, s, Set{Int}()), r)
+    push!(get!(state.in_neighbors, r, Set{Int}()), s)
 
     # Add actors if new
     push!(state.actors, s)
@@ -196,74 +210,48 @@ function get_in_degree(state::NetworkState, actor::Int)
     return get(state.in_degree, actor, 0.0)
 end
 
+const _EMPTY_NEIGHBORS = Set{Int}()
+
 """
     get_common_senders(state::NetworkState, actor1::Int, actor2::Int) -> Set{Int}
 
 Get the set of actors who have sent events to both actor1 and actor2.
+O(min degree) via the incrementally maintained adjacency sets.
 """
 function get_common_senders(state::NetworkState, actor1::Int, actor2::Int)
-    senders1 = Set{Int}()
-    senders2 = Set{Int}()
-
-    for (s, r, _, _) in state.event_history
-        if r == actor1
-            push!(senders1, s)
-        elseif r == actor2
-            push!(senders2, s)
-        end
-    end
-
-    return intersect(senders1, senders2)
+    return intersect(get_in_neighbors(state, actor1),
+                     get_in_neighbors(state, actor2))
 end
 
 """
     get_common_receivers(state::NetworkState, actor1::Int, actor2::Int) -> Set{Int}
 
 Get the set of actors who have received events from both actor1 and actor2.
+O(min degree) via the incrementally maintained adjacency sets.
 """
 function get_common_receivers(state::NetworkState, actor1::Int, actor2::Int)
-    receivers1 = Set{Int}()
-    receivers2 = Set{Int}()
-
-    for (s, r, _, _) in state.event_history
-        if s == actor1
-            push!(receivers1, r)
-        elseif s == actor2
-            push!(receivers2, r)
-        end
-    end
-
-    return intersect(receivers1, receivers2)
+    return intersect(get_out_neighbors(state, actor1),
+                     get_out_neighbors(state, actor2))
 end
 
 """
     get_out_neighbors(state::NetworkState, actor::Int) -> Set{Int}
 
 Get the set of actors to whom the given actor has sent events.
+Returns the internal set — treat as read-only.
 """
 function get_out_neighbors(state::NetworkState, actor::Int)
-    neighbors = Set{Int}()
-    for (s, r, _, _) in state.event_history
-        if s == actor
-            push!(neighbors, r)
-        end
-    end
-    return neighbors
+    return get(state.out_neighbors, actor, _EMPTY_NEIGHBORS)
 end
 
 """
     get_in_neighbors(state::NetworkState, actor::Int) -> Set{Int}
 
 Get the set of actors who have sent events to the given actor.
+Returns the internal set — treat as read-only.
 """
 function get_in_neighbors(state::NetworkState, actor::Int)
-    neighbors = Set{Int}()
-    for (s, r, _, _) in state.event_history
-        if r == actor
-            push!(neighbors, s)
-        end
-    end
-    return neighbors
+    return get(state.in_neighbors, actor, _EMPTY_NEIGHBORS)
 end
 
 """

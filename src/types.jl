@@ -23,7 +23,8 @@ struct Event{T}
 
     function Event{T}(sender::Int, receiver::Int, time::T,
                       eventtype::Symbol, weight::Float64) where T
-        sender == receiver && @warn "Self-loop detected: sender == receiver ($sender)"
+        # Self-loops (sender == receiver) are permitted; exclude them from
+        # risk sets via CaseControlSampler(exclude_self_loops=true) instead
         new{T}(sender, receiver, time, eventtype, weight)
     end
 end

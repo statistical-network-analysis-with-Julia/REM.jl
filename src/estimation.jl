@@ -79,10 +79,26 @@ Fit a relational event model using stratified Cox regression.
 """
 function fit_rem(observations::DataFrame, stat_names::Vector{String};
                  maxiter::Int=100, tol::Float64=1e-8)
+    # Validate input
+    missing_cols = setdiff(stat_names, names(observations))
+    isempty(missing_cols) ||
+        throw(ArgumentError("Statistic columns not found in observations: $(join(missing_cols, ", "))"))
+    for col in ("is_event", "stratum")
+        col in names(observations) ||
+            throw(ArgumentError("observations must have an `$col` column (from generate_observations)"))
+    end
+
     # Extract data
     X = Matrix{Float64}(observations[!, stat_names])
     y = observations.is_event
     strata = observations.stratum
+
+    # Each stratum must contain exactly one case
+    for s in unique(strata)
+        n_cases = sum(y[strata .== s])
+        n_cases == 1 ||
+            throw(ArgumentError("Stratum $s has $n_cases cases; each stratum must have exactly one"))
+    end
 
     n_obs = nrow(observations)
     n_params = length(stat_names)
@@ -147,37 +163,46 @@ function _fit_stratified_clogit(X::Matrix{Float64}, y::Vector{Bool}, strata::Vec
     strata_indices = Dict(s => findall(==(s), strata) for s in unique_strata)
 
     converged = false
-    ll = -Inf
-    ll_old = -Inf
+    ll, grad, hess = _compute_clogit_derivatives(X, y, strata_indices, beta)
 
     for iter in 1:maxiter
-        # Compute log-likelihood, gradient, and Hessian
-        ll, grad, hess = _compute_clogit_derivatives(X, y, strata_indices, beta)
-
-        # Check convergence
-        if iter > 1 && abs(ll - ll_old) < tol
-            converged = true
-            break
-        end
-        ll_old = ll
-
-        # Newton-Raphson update
-        # Use pseudo-inverse for numerical stability
-        try
-            delta = -hess \ grad
-            beta .+= delta
+        # Convergence: small likelihood change AND small gradient
+        # (log-likelihood change alone can stall away from the optimum)
+        # Newton-Raphson update with step-halving if the likelihood drops
+        delta = try
+            -hess \ grad
         catch e
             @warn "Hessian inversion failed at iteration $iter: $e"
             break
         end
+
+        step = 1.0
+        ll_new = -Inf
+        local grad_new, hess_new
+        for _ in 1:10
+            ll_new, grad_new, hess_new =
+                _compute_clogit_derivatives(X, y, strata_indices, beta .+ step .* delta)
+            ll_new >= ll && break
+            step /= 2
+        end
+
+        beta .+= step .* delta
+        ll_change = abs(ll_new - ll)
+        ll, grad, hess = ll_new, grad_new, hess_new
+
+        if ll_change < tol && norm(grad) < sqrt(tol)
+            converged = true
+            break
+        end
     end
 
-    # Compute standard errors from Hessian
-    try
+    # Standard errors from the Hessian at the final β (derivatives above are
+    # always recomputed post-update, so hess is never stale)
+    std_errors = try
         var_cov = -inv(hess)
-        std_errors = sqrt.(diag(var_cov))
+        sqrt.(diag(var_cov))
     catch
-        std_errors = fill(NaN, p)
+        fill(NaN, p)
     end
 
     z_values = beta ./ std_errors

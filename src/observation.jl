@@ -78,9 +78,15 @@ function generate_observations(seq::EventSequence{T}, stats::Vector{<:AbstractSt
                                start_index::Int=1, end_index::Int=length(seq),
                                decay::Float64=0.0,
                                at_risk::Union{Nothing, Set{Int}}=nothing) where T
-    # Set random seed if specified
-    if !isnothing(sampler.seed)
-        Random.seed!(sampler.seed)
+    # Local RNG: reproducible without mutating the global RNG
+    rng = isnothing(sampler.seed) ? Random.default_rng() : Random.Xoshiro(sampler.seed)
+
+    # The ordinal likelihood assumes a strict event order; tied timestamps
+    # are processed in (arbitrary) sequence order without a tie correction
+    if end_index > start_index &&
+       !allunique(seq[i].time for i in start_index:end_index)
+        @warn "Event sequence contains tied timestamps; ties are ordered " *
+              "arbitrarily and the ordinal likelihood applies no tie correction" maxlog = 1
     end
 
     # Initialize network state
@@ -92,8 +98,16 @@ function generate_observations(seq::EventSequence{T}, stats::Vector{<:AbstractSt
     end
 
     # Determine actors in risk set
-    actors = isnothing(at_risk) ? collect(seq.actors) : collect(at_risk)
+    actors = isnothing(at_risk) ? sort!(collect(seq.actors)) : sort!(collect(at_risk))
     n_actors = length(actors)
+
+    # Number of distinct dyads available as controls (case dyad excluded)
+    max_controls = n_actors * (n_actors - (sampler.exclude_self_loops ? 1 : 0)) - 1
+    n_wanted = min(sampler.n_controls, max_controls)
+    if n_wanted < sampler.n_controls
+        @warn "Requested $(sampler.n_controls) controls but only $max_controls " *
+              "distinct dyads are available; using the full risk set instead" maxlog = 1
+    end
 
     # Pre-allocate observation storage
     observations = Observation[]
@@ -114,32 +128,42 @@ function generate_observations(seq::EventSequence{T}, stats::Vector{<:AbstractSt
         push!(observations, Observation(event_idx, event.sender, event.receiver,
                                         case_stats, true, event_idx))
 
-        # Sample controls
-        controls_sampled = 0
-        max_attempts = sampler.n_controls * 10  # Prevent infinite loops
-        attempts = 0
+        is_case = (s, r) -> s == event.sender && r == event.receiver
 
-        while controls_sampled < sampler.n_controls && attempts < max_attempts
-            attempts += 1
-
-            # Randomly sample a sender and receiver
-            s = actors[rand(1:n_actors)]
-            r = actors[rand(1:n_actors)]
-
-            # Skip self-loops if configured
-            if sampler.exclude_self_loops && s == r
-                continue
+        # Controls are drawn WITHOUT replacement: a dyad drawn k times would
+        # contribute k·exp(η) to the stratum denominator and bias estimates.
+        if 2 * n_wanted >= max_controls
+            # Dense request: enumerate all distinct control dyads, then take
+            # a random subset (or all of them)
+            all_dyads = Tuple{Int,Int}[]
+            for s in actors, r in actors
+                (sampler.exclude_self_loops && s == r) && continue
+                is_case(s, r) && continue
+                push!(all_dyads, (s, r))
             end
-
-            # Skip if this is the actual event
-            if s == event.sender && r == event.receiver
-                continue
+            chosen = n_wanted >= length(all_dyads) ? all_dyads :
+                     all_dyads[randperm(rng, length(all_dyads))[1:n_wanted]]
+            for (s, r) in chosen
+                control_stats = compute_all(stats, state, s, r)
+                push!(observations,
+                      Observation(event_idx, s, r, control_stats, false, event_idx))
             end
+        else
+            # Sparse request: rejection-sample distinct dyads
+            sampled = Set{Tuple{Int,Int}}()
+            while length(sampled) < n_wanted
+                s = actors[rand(rng, 1:n_actors)]
+                r = actors[rand(rng, 1:n_actors)]
 
-            # Compute statistics for control
-            control_stats = compute_all(stats, state, s, r)
-            push!(observations, Observation(event_idx, s, r, control_stats, false, event_idx))
-            controls_sampled += 1
+                (sampler.exclude_self_loops && s == r) && continue
+                is_case(s, r) && continue
+                (s, r) in sampled && continue
+
+                push!(sampled, (s, r))
+                control_stats = compute_all(stats, state, s, r)
+                push!(observations,
+                      Observation(event_idx, s, r, control_stats, false, event_idx))
+            end
         end
 
         # Update state with the actual event

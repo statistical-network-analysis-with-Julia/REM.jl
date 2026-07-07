@@ -1,6 +1,6 @@
 [deps]
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
-REM = "f8e5b5a0-7c3d-4b5a-9c5e-1a2b3c4d5e6f"
+REM = "f78d20dc-c2b5-46e6-a2d4-577bd45c3c5a"
 
 [sources]
 REM = {path = ".."}

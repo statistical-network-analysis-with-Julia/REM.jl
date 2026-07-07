@@ -24,6 +24,8 @@ Relational Event Models (REM) are statistical models for analyzing sequences of 
 
 REM.jl is a port of [eventnet](https://github.com/juergenlerner/eventnet), providing efficient tools for modeling sequences of directed interactions between actors.
 
+**Modeling assumptions.** REM.jl estimates the *ordinal* relational event model: only the order of events enters the likelihood (each event is one stratum of a conditional logistic regression against sampled non-events). Exact inter-event waiting times are used only for optional decay weighting, not as a hazard term — the interval-timing likelihood of R `relevent::rem.dyad` is not implemented. Tied timestamps are processed in arbitrary sequence order without a tie correction, so coarse/tied time data deserve caution. Controls are sampled without replacement; when a small actor set makes fewer distinct dyads available than `n_controls`, the full risk set is used instead.
+
 ## Installation
 
 ```julia

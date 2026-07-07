@@ -17,7 +17,6 @@ using Distributions
 using LinearAlgebra
 using Printf
 using Random
-using SparseArrays
 using Statistics
 using StatsBase
 

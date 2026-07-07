@@ -70,19 +70,19 @@ name(stat::NodeMix) = stat.stat_name
 Measures the difference in a numeric attribute between sender and receiver.
 
 # Fields
-- `attribute::NodeAttribute{<:Number}`: The numeric attribute.
+- `attribute::NodeAttribute{T}`: The numeric attribute.
 - `absolute::Bool`: If true, return absolute difference.
 - `stat_name::String`: Name for this statistic.
 """
-struct NodeDifference <: NodeStatistic
-    attribute::NodeAttribute{<:Number}
+struct NodeDifference{T<:Number} <: NodeStatistic
+    attribute::NodeAttribute{T}
     absolute::Bool
     stat_name::String
 
     function NodeDifference(attribute::NodeAttribute{T}; absolute::Bool=false,
                             name::String="") where T<:Number
         stat_name = isempty(name) ? "diff_$(attribute.name)$(absolute ? "_abs" : "")" : name
-        new(attribute, absolute, stat_name)
+        new{T}(attribute, absolute, stat_name)
     end
 end
 
@@ -99,16 +99,16 @@ name(stat::NodeDifference) = stat.stat_name
 Measures the sum of a numeric attribute for sender and receiver.
 
 # Fields
-- `attribute::NodeAttribute{<:Number}`: The numeric attribute.
+- `attribute::NodeAttribute{T}`: The numeric attribute.
 - `stat_name::String`: Name for this statistic.
 """
-struct NodeSum <: NodeStatistic
-    attribute::NodeAttribute{<:Number}
+struct NodeSum{T<:Number} <: NodeStatistic
+    attribute::NodeAttribute{T}
     stat_name::String
 
     function NodeSum(attribute::NodeAttribute{T}; name::String="") where T<:Number
         stat_name = isempty(name) ? "sum_$(attribute.name)" : name
-        new(attribute, stat_name)
+        new{T}(attribute, stat_name)
     end
 end
 
@@ -124,16 +124,16 @@ name(stat::NodeSum) = stat.stat_name
 Measures the product of a numeric attribute for sender and receiver.
 
 # Fields
-- `attribute::NodeAttribute{<:Number}`: The numeric attribute.
+- `attribute::NodeAttribute{T}`: The numeric attribute.
 - `stat_name::String`: Name for this statistic.
 """
-struct NodeProduct <: NodeStatistic
-    attribute::NodeAttribute{<:Number}
+struct NodeProduct{T<:Number} <: NodeStatistic
+    attribute::NodeAttribute{T}
     stat_name::String
 
     function NodeProduct(attribute::NodeAttribute{T}; name::String="") where T<:Number
         stat_name = isempty(name) ? "product_$(attribute.name)" : name
-        new(attribute, stat_name)
+        new{T}(attribute, stat_name)
     end
 end
 
@@ -149,16 +149,16 @@ name(stat::NodeProduct) = stat.stat_name
 Returns the sender's attribute value (as a main effect).
 
 # Fields
-- `attribute::NodeAttribute{<:Number}`: The numeric attribute.
+- `attribute::NodeAttribute{T}`: The numeric attribute.
 - `stat_name::String`: Name for this statistic.
 """
-struct SenderAttribute <: NodeStatistic
-    attribute::NodeAttribute{<:Number}
+struct SenderAttribute{T<:Number} <: NodeStatistic
+    attribute::NodeAttribute{T}
     stat_name::String
 
     function SenderAttribute(attribute::NodeAttribute{T}; name::String="") where T<:Number
         stat_name = isempty(name) ? "sender_$(attribute.name)" : name
-        new(attribute, stat_name)
+        new{T}(attribute, stat_name)
     end
 end
 
@@ -174,16 +174,16 @@ name(stat::SenderAttribute) = stat.stat_name
 Returns the receiver's attribute value (as a main effect).
 
 # Fields
-- `attribute::NodeAttribute{<:Number}`: The numeric attribute.
+- `attribute::NodeAttribute{T}`: The numeric attribute.
 - `stat_name::String`: Name for this statistic.
 """
-struct ReceiverAttribute <: NodeStatistic
-    attribute::NodeAttribute{<:Number}
+struct ReceiverAttribute{T<:Number} <: NodeStatistic
+    attribute::NodeAttribute{T}
     stat_name::String
 
     function ReceiverAttribute(attribute::NodeAttribute{T}; name::String="") where T<:Number
         stat_name = isempty(name) ? "receiver_$(attribute.name)" : name
-        new(attribute, stat_name)
+        new{T}(attribute, stat_name)
     end
 end
 

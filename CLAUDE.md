@@ -52,6 +52,13 @@ All statistics implement the `compute(stat, state, sender, receiver) -> Float64`
 2. `generate_observations()` - Computes statistics for cases and sampled controls
 3. `fit_rem()` - Fits stratified conditional logistic regression via Newton-Raphson
 
+## Modeling Assumptions and Behaviors
+
+- **Ordinal likelihood only**: each event is one stratum of a conditional logistic regression; exact waiting times enter only through optional decay weighting, not as a hazard term (unlike `relevent::rem.dyad`'s interval likelihood). Tied timestamps are ordered arbitrarily (a one-time warning fires).
+- **Sampling is without replacement** with a local seeded RNG; when fewer distinct dyads exist than `n_controls`, the full risk set is enumerated instead (one-time warning).
+- `NetworkState` maintains incremental `out_neighbors`/`in_neighbors` adjacency sets so neighbor queries are O(degree); adjacency records "ever had an event" and does not expire under decay (counts do decay).
+- `_fit_stratified_clogit` uses Newton-Raphson with step-halving; convergence requires both a small log-likelihood change and a small gradient norm.
+
 ## Key Design Patterns
 
 - Statistics are computed lazily using `NetworkState` which updates incrementally

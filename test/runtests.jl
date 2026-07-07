@@ -2,6 +2,7 @@ using REM
 using Test
 using DataFrames
 using Dates
+using Random
 
 @testset "REM.jl" begin
     @testset "Event and EventSequence" begin
@@ -273,14 +274,147 @@ using Dates
             ReceiverPopularity()
         ]
 
-        # Generate observations
+        # Generate observations: only 5 distinct control dyads exist among
+        # 3 actors, so the request for 10 is capped (with a warning) and
+        # the full risk set is used
         sampler = CaseControlSampler(n_controls=10, seed=123)
-        obs = generate_observations(seq, stats, sampler)
+        obs = @test_logs (:warn, r"only 5 distinct dyads") match_mode = :any begin
+            generate_observations(seq, stats, sampler)
+        end
 
-        @test nrow(obs) == 6 * 11  # 6 events * (1 case + 10 controls)
+        @test nrow(obs) == 6 * 6  # 6 events * (1 case + 5 distinct controls)
+
+        # No stratum may contain duplicate dyads
+        for st in unique(obs.stratum)
+            sub = obs[obs.stratum .== st, :]
+            @test allunique(collect(zip(sub.sender, sub.receiver)))
+        end
+
+        # Fit end-to-end
+        result = fit_rem(obs, ["repetition", "reciprocity"])
+        @test result isa REMResult
+        @test length(coef(result)) == 2
+        @test all(isfinite, result.log_likelihood)
 
         # Compute statistics without sampling
         stats_df = compute_statistics(seq, stats)
         @test nrow(stats_df) == 6
+    end
+
+    @testset "Sampling without replacement" begin
+        # Larger actor set: rejection sampling path; controls must be
+        # distinct within each stratum
+        events = [Event(i, mod1(i + 1, 10), Float64(i)) for i in 1:30]
+        seq = EventSequence(events)
+        sampler = CaseControlSampler(n_controls=20, seed=7)
+        obs = generate_observations(seq, [Repetition()], sampler)
+
+        @test nrow(obs) == 30 * 21
+        for st in unique(obs.stratum)
+            sub = obs[obs.stratum .== st, :]
+            @test allunique(collect(zip(sub.sender, sub.receiver)))
+            @test sum(sub.is_event) == 1
+        end
+
+        # Reproducible with the same seed, without touching the global RNG
+        Random.seed!(1234)
+        marker1 = rand()
+        Random.seed!(1234)
+        obs2 = generate_observations(seq, [Repetition()], sampler)
+        marker2 = rand()
+        @test obs == obs2 skip = false
+        @test marker1 == marker2  # global RNG stream untouched by sampler seed
+    end
+
+    @testset "Neighbor sets are incremental" begin
+        events = [Event(1, 2, 1.0), Event(2, 3, 2.0), Event(1, 3, 3.0),
+                  Event(3, 1, 4.0)]
+        seq = EventSequence(events)
+        state = NetworkState(seq)
+        for e in seq
+            update!(state, e)
+        end
+
+        @test get_out_neighbors(state, 1) == Set([2, 3])
+        @test get_in_neighbors(state, 3) == Set([1, 2])
+        @test REM.get_common_receivers(state, 1, 2) == Set([3])
+        @test REM.get_common_senders(state, 2, 3) == Set([1])
+
+        reset!(state)
+        @test isempty(get_out_neighbors(state, 1))
+    end
+
+    @testset "Clogit analytic check" begin
+        # Three 1:1 strata with covariate differences (case − control) of
+        # +1, +1, −1. The conditional-logit MLE solves 2 − 3σ(β) = 0,
+        # i.e. β = log(2).
+        obs = DataFrame(
+            event_index = [1, 1, 2, 2, 3, 3],
+            sender = [1, 2, 1, 2, 1, 2],
+            receiver = [2, 1, 2, 1, 2, 1],
+            x = [1.0, 0.0, 1.0, 0.0, 0.0, 1.0],
+            is_event = [true, false, true, false, true, false],
+            stratum = [1, 1, 2, 2, 3, 3]
+        )
+
+        result = fit_rem(obs, ["x"])
+        @test result.converged
+        @test result.coefficients[1] ≈ log(2) atol = 1e-6
+
+        # Log-likelihood at the MLE: 2·log σ(β) + log σ(−β), β = log 2
+        @test result.log_likelihood ≈ 2 * log(2 / 3) + log(1 / 3) atol = 1e-8
+
+        # Input validation
+        @test_throws ArgumentError fit_rem(obs, ["nonexistent"])
+        bad = copy(obs)
+        bad.is_event = [true, true, true, false, true, false]
+        @test_throws ArgumentError fit_rem(bad, ["x"])
+    end
+
+    @testset "Coefficient recovery on simulated data" begin
+        # Simulate events from a known ordinal REM with inertia
+        # (repetition) and reciprocity effects, then recover the
+        # coefficients with the full risk set.
+        rng = Random.Xoshiro(20260706)
+        n_actors = 8
+        β_true = [0.6, 0.9]           # [repetition, reciprocity]
+        stats = [Repetition(), Reciprocity()]
+
+        dyads = [(s, r) for s in 1:n_actors for r in 1:n_actors if s != r]
+        state = NetworkState{Float64}(n_actors=n_actors)
+        state.actors = Set(1:n_actors)
+
+        events = Event{Float64}[]
+        for step in 1:600
+            η = [sum(β_true .* compute_all(stats, state, s, r)) for (s, r) in dyads]
+            w = exp.(η .- maximum(η))
+            w ./= sum(w)
+            # Sample a dyad from the softmax
+            u = rand(rng)
+            acc = 0.0
+            pick = length(dyads)
+            for (k, p) in enumerate(w)
+                acc += p
+                if u <= acc
+                    pick = k
+                    break
+                end
+            end
+            s, r = dyads[pick]
+            ev = Event(s, r, Float64(step))
+            push!(events, ev)
+            update!(state, ev)
+        end
+
+        seq = EventSequence(events)
+        # 55 < 56 distinct controls per case, so the sampler enumerates the
+        # full risk set — no sampling noise beyond the simulation itself
+        result = fit_rem(seq, stats; n_controls=100, seed=1)
+
+        @test result.converged
+        @test result.coefficients[1] ≈ β_true[1] atol = 0.25
+        @test result.coefficients[2] ≈ β_true[2] atol = 0.25
+        # Both effects strongly significant
+        @test all(result.p_values .< 0.01)
     end
 end
