@@ -33,6 +33,8 @@ Where:
 The most intuitive approach is to specify a halflife - the time after which an event has half its original weight:
 
 ```julia
+using REM
+
 # Events lose half their weight after 10 time units
 decay = halflife_to_decay(10.0)
 ```
@@ -50,10 +52,10 @@ decay = 0.1
 
 ```julia
 # Halflife to decay rate
-decay = halflife_to_decay(halflife)
+decay = halflife_to_decay(10.0)
 
 # Decay rate to halflife
-halflife = decay_to_halflife(decay)
+halflife = decay_to_halflife(decay)   # 10.0 again
 
 # Relationship: decay = log(2) / halflife
 ```
@@ -63,6 +65,11 @@ halflife = decay_to_halflife(decay)
 ### With fit_rem
 
 ```julia
+events = [Event(1, 2, 1.0), Event(2, 1, 2.0), Event(1, 3, 3.0),
+          Event(3, 2, 4.0), Event(2, 3, 5.0), Event(1, 2, 6.0)]
+seq = EventSequence(events)
+stats = [Repetition(), Reciprocity()]
+
 result = fit_rem(seq, stats;
     n_controls = 100,
     decay = halflife_to_decay(10.0),
@@ -152,12 +159,14 @@ state = EventNetworkState(seq; decay=decay)
 
 Without decay:
 
+<!-- skip-check -->
 ```julia
 get_dyad_count(state, s, r)  # = total number of s→r events
 ```
 
 With decay:
 
+<!-- skip-check -->
 ```julia
 get_dyad_count(state, s, r)  # = Σ exp(-λ × elapsed_time_i)
 ```
@@ -195,8 +204,8 @@ Out-degree and in-degree are similarly weighted:
 ```julia
 # Without decay: count of events sent
 # With decay: Σ exp(-λ × elapsed) × event_weight
-get_out_degree(state, actor)
-get_in_degree(state, actor)
+get_out_degree(state, 1)
+get_in_degree(state, 1)
 ```
 
 ### All Statistics

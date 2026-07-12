@@ -178,10 +178,19 @@ println(seq.n_actors)  # 3
 Load directly from a CSV file:
 
 ```julia
+# Write a small demo file first
+using CSV, DataFrames
+CSV.write("events.csv", DataFrame(sender=[1, 2, 1], receiver=[2, 1, 3],
+                                  time=[1.0, 2.0, 3.0]))
+
 # Basic usage
 seq = load_events("events.csv")
+```
 
-# With options
+Column names and actor-name handling are configurable:
+
+<!-- skip-check -->
+```julia
 seq = load_events("events.csv";
     sender_col = :source,
     receiver_col = :target,
@@ -336,7 +345,7 @@ rs = RiskSet(
 )
 
 # Number of dyads in risk set
-n_dyads(rs)  # 3*4 - 3 = 9 (excluding self-loops)
+REM.n_dyads(rs)  # 3*4 - 3 = 9 (excluding self-loops)
 ```
 
 ## Working with Different Time Scales
@@ -407,6 +416,7 @@ e = Event(1, 1, 1.0)  # Warning: Self-loop detected
 To filter self-loops:
 
 ```julia
+raw_events = [Event(1, 2, 1.0), Event(2, 2, 2.0), Event(2, 3, 3.0)]
 events = [e for e in raw_events if e.sender != e.receiver]
 seq = EventSequence(events)
 ```
@@ -416,6 +426,9 @@ seq = EventSequence(events)
 For DataFrames with missing values:
 
 ```julia
+df = DataFrame(sender=[1, 2, missing], receiver=[2, 1, 3],
+               time=[1.0, 2.0, 3.0])
+
 # Filter rows with missing values before loading
 df_clean = dropmissing(df, [:sender, :receiver, :time])
 seq = load_events(df_clean)
@@ -445,8 +458,8 @@ decay = halflife_to_decay(10.0)  # λ such that weight = 0.5 at t = 10
 # Convert back
 halflife = decay_to_halflife(decay)
 
-# Compute decay weight for elapsed time
-weight = compute_decay_weight(decay, elapsed_time)
+# Compute decay weight for an elapsed time of 5 units
+weight = compute_decay_weight(decay, 5.0)
 ```
 
 ### Sequence Statistics

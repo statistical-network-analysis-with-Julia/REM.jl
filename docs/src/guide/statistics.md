@@ -380,6 +380,11 @@ stats = [
 ### Computing Statistics Manually
 
 ```julia
+# A small demo sequence
+demo_events = [Event(1, 2, 1.0), Event(2, 1, 2.0), Event(1, 3, 3.0),
+               Event(3, 2, 4.0), Event(2, 3, 5.0), Event(1, 2, 6.0)]
+seq = EventSequence(demo_events)
+
 # Create network state
 state = EventNetworkState(seq)
 
@@ -388,12 +393,12 @@ for i in 1:5
     update!(state, seq[i])
 end
 
-# Compute a single statistic for a potential event
+# Compute a single statistic for a potential event (sender 1, receiver 2)
 rep = Repetition()
-value = compute(rep, state, sender_id, receiver_id)
+value = compute(rep, state, 1, 2)
 
 # Compute all statistics
-values = compute_all(stats, state, sender_id, receiver_id)
+values = compute_all(stats, state, 1, 2)
 ```
 
 ### Custom Statistic Names
@@ -431,12 +436,12 @@ length(ss)     # 3
 ss[1]          # Repetition()
 ss.names       # ["repetition", "reciprocity", "transitive_closure"]
 
-# Compute all
-values = compute_all(ss, state, sender, receiver)
+# Compute all (for candidate sender 1, receiver 2)
+values = compute_all(ss, state, 1, 2)
 
 # In-place variant for hot loops
 dest = Vector{Float64}(undef, length(ss))
-compute_all!(dest, ss, state, sender, receiver)
+compute_all!(dest, ss, state, 1, 2)
 ```
 
 `StatisticSet` stores the statistics as a tuple, so `compute_all` on a

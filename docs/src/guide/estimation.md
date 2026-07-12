@@ -25,6 +25,8 @@ This approach is statistically valid and dramatically reduces computation time.
 ## Configuring the Sampler
 
 ```julia
+using REM
+
 sampler = CaseControlSampler(
     n_controls = 100,         # Controls per case
     exclude_self_loops = true, # Exclude s→s from risk set
@@ -65,6 +67,12 @@ Controls are sampled **without replacement**. If the actor set is small enough t
 ## Generating Observations
 
 ```julia
+# A demo sequence and statistics
+events = [Event(1, 2, 1.0), Event(2, 1, 2.0), Event(1, 3, 3.0),
+          Event(3, 2, 4.0), Event(2, 3, 5.0), Event(1, 2, 6.0)]
+seq = EventSequence(events)
+stats = [Repetition(), Reciprocity()]
+
 # Create observations DataFrame
 obs = generate_observations(seq, stats, sampler)
 ```
@@ -105,8 +113,8 @@ obs = generate_observations(seq, stats, sampler; start_index=6)
 Specify a custom set of actors at risk:
 
 ```julia
-# Only actors 1-100 can send/receive
-at_risk = collect(1:100)
+# Only actors 1-2 can send/receive
+at_risk = Set(1:2)
 obs = generate_observations(seq, stats, sampler; at_risk=at_risk)
 ```
 
@@ -128,6 +136,8 @@ result = fit_rem(seq, stats;
 For more control over the process:
 
 ```julia
+using DataFrames   # for nrow
+
 # Stage 1: Generate observations
 sampler = CaseControlSampler(n_controls=100, seed=42)
 obs = generate_observations(seq, stats, sampler)
@@ -360,14 +370,18 @@ end
 Model effects that change over time using event windows:
 
 ```julia
-# Split sequence into periods
+# Split sequence into periods (start_index/end_index live on
+# generate_observations; fit from the observation DataFrames)
 mid_point = length(seq) ÷ 2
+sampler = CaseControlSampler(n_controls=100, seed=1)
 
-# Fit separate models
-result_early = fit_rem(seq, stats;
-    n_controls=100, start_index=1, end_index=mid_point)
-result_late = fit_rem(seq, stats;
-    n_controls=100, start_index=mid_point+1)
+obs_early = generate_observations(seq, stats, sampler;
+                                  start_index=1, end_index=mid_point)
+obs_late = generate_observations(seq, stats, sampler;
+                                 start_index=mid_point + 1)
+
+result_early = fit_rem(obs_early, [name(s) for s in stats])
+result_late = fit_rem(obs_late, [name(s) for s in stats])
 
 # Compare coefficients
 println("Early period: ", coef(result_early))

@@ -28,10 +28,20 @@ REM.jl is a port of [eventnet](https://github.com/juergenlerner/eventnet), provi
 
 ## Installation
 
+Requires Julia 1.12+. REM.jl depends on the unregistered
+[Network.jl](https://github.com/statistical-network-analysis-with-Julia/Network.jl) and [NetworkDynamic.jl](https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl) packages, which must be added first (in this order):
+
 ```julia
 using Pkg
+Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Network.jl")
+Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/REM.jl")
 ```
+
+For development, you can instead clone all ecosystem repositories side by
+side (the monorepo layout) and start Julia with the root workspace project
+(`julia --project=.` in the clone root): the `[sources]` path dependencies
+then wire the packages together with no ordered installs needed.
 
 ## Statistics Implemented
 
@@ -193,6 +203,12 @@ decay_to_halflife(decay)              # Convert decay rate back to halflife
 compute_decay_weight(decay, 5.0)      # Weight of an event 5 time units old
 ```
 
+Decayed counts are stored as `(value, last_time)` pairs and decayed
+**lazily on read**: advancing the state clock is O(1), each event is
+absorbed exactly once, and nothing is rescanned or rescaled per
+evaluation — so statistic computation cost is independent of how long the
+event history is.
+
 ### Node Attributes
 
 Define and use actor-level attributes:
@@ -207,7 +223,7 @@ stats = [
     AttributeMatch(gender),            # Homophily: same gender
     NodeDifference(age),          # Age difference effect
     SenderAttribute(age),         # Sender's age effect
-    NodeMix(gender; sender_val="M", receiver_val="F")  # M→F pattern
+    NodeMix(gender, "M", "F"),    # M→F mixing pattern
 ]
 ```
 
@@ -224,7 +240,9 @@ df = DataFrame(
 )
 seq = load_events(df)
 
-# From CSV file
+# From CSV file (write one for the demo)
+using CSV
+CSV.write("events.csv", df)
 seq = load_events("events.csv")
 
 # With string actor names (automatically converted to integer IDs)
@@ -285,6 +303,7 @@ end
 
 ## Utility Functions
 
+<!-- skip-check -->
 ```julia
 # Time decay utilities
 halflife_to_decay(halflife)          # Convert halflife to decay parameter
@@ -305,6 +324,7 @@ n_dyads(risk_set)                    # Number of dyads in risk set
 
 ## Running Tests
 
+<!-- skip-check -->
 ```julia
 include("test/runtests.jl")
 ```

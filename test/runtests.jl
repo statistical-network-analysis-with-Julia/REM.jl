@@ -515,6 +515,14 @@ import StatsAPI
         @test StatsBase.coef(fit) == fit.coefficients
         # ... and Statistics still works alongside
         @test mean(coef(fit)) ≈ sum(fit.coefficients) / 2
+
+        # show() renders the shared ecosystem coefficient table
+        # (Network.jl print_coeftable: z / Pr(>|z|) columns + signif codes)
+        out = sprint(show, fit)
+        @test occursin("Relational Event Model Results", out)
+        @test occursin("repetition", out)
+        @test occursin("Pr(>|z|)", out)
+        @test occursin("Signif. codes", out)
     end
 
     @testset "Tuple-backed StatisticSet" begin

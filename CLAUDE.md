@@ -36,7 +36,7 @@ include("test/runtests.jl")
 
 ### Network State (`src/network.jl`)
 - `EventNetworkState{T}` - Tracks cumulative network state for efficient statistic computation
-- Maintains dyad counts, degrees, and event history with optional exponential decay
+- Maintains dyad counts, degrees, and event history with optional exponential decay; decayed counts are stored as `(value, last_update_time)` pairs and decayed lazily on read relative to `current_time`, so advancing the clock is O(1) and each event is absorbed exactly once
 
 ### Statistics (`src/statistics/`)
 All statistics implement the `compute(stat, state, sender, receiver) -> Float64` interface:
