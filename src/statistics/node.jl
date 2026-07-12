@@ -6,7 +6,7 @@ including homophily, attribute matching, and covariate effects.
 """
 
 """
-    NodeMatch <: NodeStatistic
+    AttributeMatch <: NodeStatistic
 
 Measures homophily: tendency for events between actors with matching attributes.
 Returns 1.0 if sender and receiver have the same attribute value, 0.0 otherwise.
@@ -15,21 +15,21 @@ Returns 1.0 if sender and receiver have the same attribute value, 0.0 otherwise.
 - `attribute::NodeAttribute`: The attribute to match on.
 - `stat_name::String`: Name for this statistic.
 """
-struct NodeMatch{T} <: NodeStatistic
+struct AttributeMatch{T} <: NodeStatistic
     attribute::NodeAttribute{T}
     stat_name::String
 
-    function NodeMatch(attribute::NodeAttribute{T}; name::String="") where T
+    function AttributeMatch(attribute::NodeAttribute{T}; name::String="") where T
         stat_name = isempty(name) ? "match_$(attribute.name)" : name
         new{T}(attribute, stat_name)
     end
 end
 
-function compute(stat::NodeMatch, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::AttributeMatch, state::EventNetworkState, sender::Int, receiver::Int)
     return stat.attribute[sender] == stat.attribute[receiver] ? 1.0 : 0.0
 end
 
-name(stat::NodeMatch) = stat.stat_name
+name(stat::AttributeMatch) = stat.stat_name
 
 """
     NodeMix <: NodeStatistic
@@ -56,7 +56,7 @@ struct NodeMix{T} <: NodeStatistic
     end
 end
 
-function compute(stat::NodeMix, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::NodeMix, state::EventNetworkState, sender::Int, receiver::Int)
     sender_matches = stat.attribute[sender] == stat.sender_value
     receiver_matches = stat.attribute[receiver] == stat.receiver_value
     return (sender_matches && receiver_matches) ? 1.0 : 0.0
@@ -86,7 +86,7 @@ struct NodeDifference{T<:Number} <: NodeStatistic
     end
 end
 
-function compute(stat::NodeDifference, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::NodeDifference, state::EventNetworkState, sender::Int, receiver::Int)
     diff = Float64(stat.attribute[sender]) - Float64(stat.attribute[receiver])
     return stat.absolute ? abs(diff) : diff
 end
@@ -112,7 +112,7 @@ struct NodeSum{T<:Number} <: NodeStatistic
     end
 end
 
-function compute(stat::NodeSum, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::NodeSum, state::EventNetworkState, sender::Int, receiver::Int)
     return Float64(stat.attribute[sender]) + Float64(stat.attribute[receiver])
 end
 
@@ -137,7 +137,7 @@ struct NodeProduct{T<:Number} <: NodeStatistic
     end
 end
 
-function compute(stat::NodeProduct, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::NodeProduct, state::EventNetworkState, sender::Int, receiver::Int)
     return Float64(stat.attribute[sender]) * Float64(stat.attribute[receiver])
 end
 
@@ -162,7 +162,7 @@ struct SenderAttribute{T<:Number} <: NodeStatistic
     end
 end
 
-function compute(stat::SenderAttribute, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::SenderAttribute, state::EventNetworkState, sender::Int, receiver::Int)
     return Float64(stat.attribute[sender])
 end
 
@@ -187,7 +187,7 @@ struct ReceiverAttribute{T<:Number} <: NodeStatistic
     end
 end
 
-function compute(stat::ReceiverAttribute, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::ReceiverAttribute, state::EventNetworkState, sender::Int, receiver::Int)
     return Float64(stat.attribute[receiver])
 end
 
@@ -215,7 +215,7 @@ struct SenderCategorical{T} <: NodeStatistic
     end
 end
 
-function compute(stat::SenderCategorical, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::SenderCategorical, state::EventNetworkState, sender::Int, receiver::Int)
     return stat.attribute[sender] == stat.value ? 1.0 : 0.0
 end
 
@@ -243,7 +243,7 @@ struct ReceiverCategorical{T} <: NodeStatistic
     end
 end
 
-function compute(stat::ReceiverCategorical, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::ReceiverCategorical, state::EventNetworkState, sender::Int, receiver::Int)
     return stat.attribute[receiver] == stat.value ? 1.0 : 0.0
 end
 

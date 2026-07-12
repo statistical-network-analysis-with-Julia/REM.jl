@@ -204,6 +204,40 @@ df = DataFrame(
 seq = load_events(df; time_type=DateTime)
 ```
 
+### From a DynamicNetwork (NetworkDynamic.jl)
+
+When NetworkDynamic.jl is loaded alongside REM.jl, a package extension
+provides `EventSequence(::DynamicNetwork)`: each edge activation spell
+becomes one event whose time is the spell's onset. This lets temporal
+network data flow straight into `generate_observations`/`fit_rem`:
+
+```julia
+using REM, NetworkDynamic   # loading both activates the extension
+
+dnet = DynamicNetwork(10; observation_start=0.0, observation_end=100.0)
+activate!(dnet, 1.0, 3.0; edge=(1, 2))
+activate!(dnet, 2.0, 5.0; edge=(2, 3))
+
+seq = EventSequence(dnet)                       # events at t = 1.0, 2.0
+result = fit_rem(seq, [Repetition(), Reciprocity()]; n_controls=20)
+```
+
+Options:
+
+- `eventtype=:onset`, `weight=1.0` — set on every generated event.
+- `include_onset_censored=false` — onset-censored spells are skipped by
+  default (their recorded onset is the observation-window start, not an
+  observed event).
+
+For undirected networks the smaller vertex ID becomes the sender (edges
+are stored with `(min, max)` ordering). Only actors that appear in some
+event end up in `seq.actors`; pass `at_risk` to `generate_observations`
+to widen the risk set to all vertices of the network.
+
+REM.jl keeps zero hard dependencies on the network stack: the method
+lives in the `REMNetworkDynamicExt` extension and is compiled only when
+NetworkDynamic.jl is present in the environment.
+
 ## Node Attributes
 
 Node attributes store actor-level covariates for use with attribute statistics.
@@ -255,7 +289,7 @@ age[1] = 26.0
 
 ```julia
 # Homophily: same gender
-NodeMatch(gender)
+AttributeMatch(gender)
 
 # Difference: age difference
 NodeDifference(age)
@@ -339,7 +373,7 @@ seq = EventSequence(events)
 
 # Decay: halflife of 1 hour = 3600 seconds
 decay = halflife_to_decay(3600.0)
-state = NetworkState(seq; decay=decay)
+state = EventNetworkState(seq; decay=decay)
 ```
 
 ### Date

@@ -23,7 +23,7 @@ struct Repetition <: DyadStatistic
         isempty(name) ? (directed ? "repetition" : "undirected_repetition") : name)
 end
 
-function compute(stat::Repetition, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::Repetition, state::EventNetworkState, sender::Int, receiver::Int)
     if stat.directed
         return get_dyad_count(state, sender, receiver)
     else
@@ -48,7 +48,7 @@ struct Reciprocity <: DyadStatistic
     Reciprocity(; name::String="reciprocity") = new(name)
 end
 
-function compute(stat::Reciprocity, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::Reciprocity, state::EventNetworkState, sender::Int, receiver::Int)
     return get_dyad_count(state, receiver, sender)
 end
 
@@ -78,7 +78,7 @@ struct InertiaStatistic <: DyadStatistic
     end
 end
 
-function compute(stat::InertiaStatistic, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::InertiaStatistic, state::EventNetworkState, sender::Int, receiver::Int)
     rep = get_dyad_count(state, sender, receiver)
     recip = get_dyad_count(state, receiver, sender)
     return stat.repetition_weight * rep + stat.reciprocity_weight * recip
@@ -111,7 +111,7 @@ struct RecencyStatistic <: DyadStatistic
     end
 end
 
-function compute(stat::RecencyStatistic, state::NetworkState{T}, sender::Int, receiver::Int) where T
+function compute(stat::RecencyStatistic, state::EventNetworkState{T}, sender::Int, receiver::Int) where T
     dyad = stat.directed ? (sender, receiver) : minmax(sender, receiver)
 
     if !haskey(state.last_event_time, dyad)
@@ -168,7 +168,7 @@ struct DyadCovariate <: DyadStatistic
     end
 end
 
-function compute(stat::DyadCovariate, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::DyadCovariate, state::EventNetworkState, sender::Int, receiver::Int)
     return get(stat.values, (sender, receiver), stat.default)
 end
 

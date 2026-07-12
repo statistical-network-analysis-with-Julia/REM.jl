@@ -6,12 +6,13 @@ Statistics in REM.jl capture different mechanisms that may drive event occurrenc
 
 All statistics implement two methods:
 
+<!-- skip-check -->
 ```julia
 compute(stat, state, sender, receiver) -> Float64
 name(stat) -> String
 ```
 
-The `compute` function calculates the statistic value for a potential event from `sender` to `receiver`, given the current `NetworkState`.
+The `compute` function calculates the statistic value for a potential event from `sender` to `receiver`, given the current `EventNetworkState`.
 
 ## Statistic Categories
 
@@ -23,7 +24,7 @@ REM.jl organizes statistics into five categories:
 | `DegreeStatistic` | Actor activity and popularity | SenderActivity, ReceiverPopularity |
 | `TriangleStatistic` | Triadic closure effects | TransitiveClosure, CyclicClosure |
 | `FourCycleStatistic` | Four-cycle clustering effects | FourCycle |
-| `NodeStatistic` | Node attribute effects | NodeMatch, NodeDifference |
+| `NodeStatistic` | Node attribute effects | AttributeMatch, NodeDifference |
 
 ## Dyad Statistics
 
@@ -34,6 +35,8 @@ These capture the history of events between the focal sender-receiver pair.
 Tendency to repeat past interactions:
 
 ```julia
+using REM
+
 # Count of past s→r events (directed)
 Repetition()
 
@@ -289,7 +292,7 @@ Indicator for matching attributes:
 gender = NodeAttribute(:gender, Dict(1=>"M", 2=>"F", 3=>"M"), "Unknown")
 
 # Returns 1.0 if sender and receiver have same gender, 0.0 otherwise
-NodeMatch(gender)
+AttributeMatch(gender)
 ```
 
 **Interpretation**: Positive coefficient = homophily (like attracts like).
@@ -369,7 +372,7 @@ stats = [
     CyclicClosure(),
 
     # Attribute effects
-    NodeMatch(gender),
+    AttributeMatch(gender),
     NodeDifference(tenure; absolute=true),
 ]
 ```
@@ -378,7 +381,7 @@ stats = [
 
 ```julia
 # Create network state
-state = NetworkState(seq)
+state = EventNetworkState(seq)
 
 # Process some events to build history
 for i in 1:5
@@ -400,7 +403,7 @@ All statistics accept a `name` parameter for custom naming:
 ```julia
 Repetition(name="past_interactions")
 TransitiveClosure(name="friends_of_friends")
-NodeMatch(gender; name="same_gender")
+AttributeMatch(gender; name="same_gender")
 ```
 
 This is useful when fitting multiple versions of the same statistic:
@@ -430,7 +433,20 @@ ss.names       # ["repetition", "reciprocity", "transitive_closure"]
 
 # Compute all
 values = compute_all(ss, state, sender, receiver)
+
+# In-place variant for hot loops
+dest = Vector{Float64}(undef, length(ss))
+compute_all!(dest, ss, state, sender, receiver)
 ```
+
+`StatisticSet` stores the statistics as a tuple, so `compute_all` on a
+set compiles to statically dispatched calls per statistic — no dynamic
+dispatch in the observation-generation/likelihood inner loop. Passing a
+plain `Vector` of statistics to `generate_observations`,
+`compute_statistics`, or `fit_rem` still works: it is converted to a
+`StatisticSet` internally. If you call these repeatedly with the same
+statistics, construct the `StatisticSet` once and reuse it to avoid
+recompiling for each new tuple type.
 
 ## Choosing Statistics
 
@@ -441,7 +457,7 @@ values = compute_all(ss, state, sender, receiver)
 | Do past interactions predict future ones? | Repetition, Reciprocity |
 | Is there preferential attachment? | SenderActivity, ReceiverPopularity |
 | Does the network cluster? | TransitiveClosure, CyclicClosure, FourCycle |
-| Is there homophily? | NodeMatch, NodeDifference |
+| Is there homophily? | AttributeMatch, NodeDifference |
 | Do attributes affect sending/receiving? | SenderAttribute, ReceiverAttribute |
 
 ### Best Practices

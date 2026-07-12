@@ -104,7 +104,7 @@ println(result)
 | Basic dyadic effects | [`Repetition`](@ref), [`Reciprocity`](@ref) |
 | Actor heterogeneity | [`SenderActivity`](@ref), [`ReceiverPopularity`](@ref) |
 | Triadic closure | [`TransitiveClosure`](@ref), [`CyclicClosure`](@ref) |
-| Homophily effects | [`NodeMatch`](@ref), [`NodeDifference`](@ref) |
+| Homophily effects | [`AttributeMatch`](@ref), [`NodeDifference`](@ref) |
 | Time-varying effects | [`RecencyStatistic`](@ref) + temporal decay |
 | Complex clustering | [`FourCycle`](@ref), [`GeometricWeightedTriads`](@ref) |
 

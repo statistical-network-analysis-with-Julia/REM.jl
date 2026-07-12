@@ -22,7 +22,7 @@ struct TransitiveClosure <: TriangleStatistic
     TransitiveClosure(; weighted::Bool=false, name::String="transitive_closure") = new(weighted, name)
 end
 
-function compute(stat::TransitiveClosure, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::TransitiveClosure, state::EventNetworkState, sender::Int, receiver::Int)
     # Find actors k where: s→k and k→r
     # These are out-neighbors of sender who are in-neighbors of receiver
     out_neighbors = get_out_neighbors(state, sender)
@@ -66,7 +66,7 @@ struct CyclicClosure <: TriangleStatistic
     CyclicClosure(; weighted::Bool=false, name::String="cyclic_closure") = new(weighted, name)
 end
 
-function compute(stat::CyclicClosure, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::CyclicClosure, state::EventNetworkState, sender::Int, receiver::Int)
     # Find actors k where: r→k and k→s
     out_neighbors_r = get_out_neighbors(state, receiver)
     in_neighbors_s = get_in_neighbors(state, sender)
@@ -107,7 +107,7 @@ struct SharedSender <: TriangleStatistic
     SharedSender(; weighted::Bool=false, name::String="shared_sender") = new(weighted, name)
 end
 
-function compute(stat::SharedSender, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::SharedSender, state::EventNetworkState, sender::Int, receiver::Int)
     # Find actors k where: k→s and k→r
     in_neighbors_s = get_in_neighbors(state, sender)
     in_neighbors_r = get_in_neighbors(state, receiver)
@@ -148,7 +148,7 @@ struct SharedReceiver <: TriangleStatistic
     SharedReceiver(; weighted::Bool=false, name::String="shared_receiver") = new(weighted, name)
 end
 
-function compute(stat::SharedReceiver, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::SharedReceiver, state::EventNetworkState, sender::Int, receiver::Int)
     # Find actors k where: s→k and r→k
     out_neighbors_s = get_out_neighbors(state, sender)
     out_neighbors_r = get_out_neighbors(state, receiver)
@@ -186,7 +186,7 @@ struct CommonNeighbors <: TriangleStatistic
     CommonNeighbors(; name::String="common_neighbors") = new(name)
 end
 
-function compute(stat::CommonNeighbors, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::CommonNeighbors, state::EventNetworkState, sender::Int, receiver::Int)
     # Get all neighbors (in or out) for both actors
     neighbors_s = union(get_out_neighbors(state, sender), get_in_neighbors(state, sender))
     neighbors_r = union(get_out_neighbors(state, receiver), get_in_neighbors(state, receiver))
@@ -226,7 +226,7 @@ struct GeometricWeightedTriads <: TriangleStatistic
     end
 end
 
-function compute(stat::GeometricWeightedTriads, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::GeometricWeightedTriads, state::EventNetworkState, sender::Int, receiver::Int)
     # Get the appropriate common set based on closure type
     if stat.closure_type == :transitive
         out_neighbors = get_out_neighbors(state, sender)

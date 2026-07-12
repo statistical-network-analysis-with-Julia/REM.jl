@@ -28,6 +28,7 @@ name
 ```@docs
 StatisticSet
 compute_all
+compute_all!
 ```
 
 ## Dyad Statistics
@@ -83,7 +84,7 @@ GeometricWeightedFourCycles
 Statistics incorporating actor-level attributes for homophily and covariate effects.
 
 ```@docs
-NodeMatch
+AttributeMatch
 NodeMix
 NodeDifference
 NodeSum

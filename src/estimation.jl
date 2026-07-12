@@ -40,25 +40,10 @@ function Base.show(io::IO, result::REMResult)
     println(io, "Log-likelihood: $(round(result.log_likelihood, digits=4))")
     println(io, "Converged: $(result.converged)")
     println(io)
-    println(io, "Coefficients:")
-    println(io, "-"^60)
-
-    # Header
-    @printf(io, "%-20s %10s %10s %10s %10s\n", "Statistic", "Coef", "Std.Err", "z", "P>|z|")
-    println(io, "-"^60)
-
-    for i in 1:length(result.coefficients)
-        sig = result.p_values[i] < 0.001 ? "***" :
-              result.p_values[i] < 0.01 ? "**" :
-              result.p_values[i] < 0.05 ? "*" :
-              result.p_values[i] < 0.1 ? "." : ""
-        @printf(io, "%-20s %10.4f %10.4f %10.4f %10.4f %s\n",
-                result.stat_names[i][1:min(20, length(result.stat_names[i]))],
-                result.coefficients[i], result.std_errors[i],
-                result.z_values[i], result.p_values[i], sig)
-    end
-    println(io, "-"^60)
-    println(io, "Signif. codes: 0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1")
+    # Shared ecosystem coefficient table (Network.jl), with significance codes
+    # and the p-value display floor (an underflowed p prints as "<1e-16")
+    print_coeftable(io, result.stat_names, result.coefficients, result.std_errors,
+                    result.p_values; z_values=result.z_values)
 end
 
 """
@@ -93,9 +78,12 @@ function fit_rem(observations::DataFrame, stat_names::Vector{String};
     y = observations.is_event
     strata = observations.stratum
 
-    # Each stratum must contain exactly one case
-    for s in unique(strata)
-        n_cases = sum(y[strata .== s])
+    # Each stratum must contain exactly one case (single pass over the rows)
+    case_counts = Dict{eltype(strata), Int}()
+    for (s, yi) in zip(strata, y)
+        case_counts[s] = get(case_counts, s, 0) + (yi ? 1 : 0)
+    end
+    for (s, n_cases) in case_counts
         n_cases == 1 ||
             throw(ArgumentError("Stratum $s has $n_cases cases; each stratum must have exactly one"))
     end
@@ -121,13 +109,14 @@ function fit_rem(observations::DataFrame, stat_names::Vector{String};
 end
 
 """
-    fit_rem(seq::EventSequence, stats::Vector{<:AbstractStatistic}; kwargs...) -> REMResult
+    fit_rem(seq::EventSequence, stats; kwargs...) -> REMResult
 
 Fit a relational event model directly from an event sequence.
 
 # Arguments
 - `seq::EventSequence`: The event sequence
-- `stats::Vector{<:AbstractStatistic}`: Statistics to include in the model
+- `stats`: Statistics to include in the model (a `StatisticSet` or a vector
+  of statistics)
 
 # Keyword Arguments
 - `n_controls::Int=100`: Number of controls per case
@@ -140,14 +129,17 @@ Fit a relational event model directly from an event sequence.
 # Returns
 - `REMResult`: Fitted model results
 """
-function fit_rem(seq::EventSequence, stats::Vector{<:AbstractStatistic};
+function fit_rem(seq::EventSequence, stats::Vector{<:AbstractStatistic}; kwargs...)
+    return fit_rem(seq, StatisticSet(stats); kwargs...)
+end
+
+function fit_rem(seq::EventSequence, stats::StatisticSet;
                  n_controls::Int=100, decay::Float64=0.0,
                  exclude_self_loops::Bool=true, seed::Union{Int,Nothing}=nothing,
                  maxiter::Int=100, tol::Float64=1e-8)
     sampler = CaseControlSampler(n_controls=n_controls, exclude_self_loops=exclude_self_loops, seed=seed)
     observations = generate_observations(seq, stats, sampler; decay=decay)
-    stat_names = [name(s) for s in stats]
-    return fit_rem(observations, stat_names; maxiter=maxiter, tol=tol)
+    return fit_rem(observations, stats.names; maxiter=maxiter, tol=tol)
 end
 
 # Internal: Fit stratified conditional logistic regression via Newton-Raphson
@@ -162,8 +154,12 @@ function _fit_stratified_clogit(X::Matrix{Float64}, y::Vector{Bool}, strata::Vec
     unique_strata = unique(strata)
     strata_indices = Dict(s => findall(==(s), strata) for s in unique_strata)
 
+    # Preallocated per-stratum work buffers shared across all derivative
+    # evaluations (sized for the largest stratum)
+    work = _clogit_workspace(strata_indices, p)
+
     converged = false
-    ll, grad, hess = _compute_clogit_derivatives(X, y, strata_indices, beta)
+    ll, grad, hess = _compute_clogit_derivatives(X, y, strata_indices, beta, work)
 
     for iter in 1:maxiter
         # Convergence: small likelihood change AND small gradient
@@ -181,7 +177,7 @@ function _fit_stratified_clogit(X::Matrix{Float64}, y::Vector{Bool}, strata::Vec
         local grad_new, hess_new
         for _ in 1:10
             ll_new, grad_new, hess_new =
-                _compute_clogit_derivatives(X, y, strata_indices, beta .+ step .* delta)
+                _compute_clogit_derivatives(X, y, strata_indices, beta .+ step .* delta, work)
             ll_new >= ll && break
             step /= 2
         end
@@ -206,7 +202,9 @@ function _fit_stratified_clogit(X::Matrix{Float64}, y::Vector{Bool}, strata::Vec
     end
 
     z_values = beta ./ std_errors
-    p_values = 2 .* (1 .- cdf.(Normal(), abs.(z_values)))
+    # ccdf keeps precision in the tail: 2*(1 - cdf(...)) underflows to
+    # exactly 0 for |z| ≳ 8
+    p_values = 2 .* ccdf.(Normal(), abs.(z_values))
 
     return (
         coefficients = beta,
@@ -218,51 +216,88 @@ function _fit_stratified_clogit(X::Matrix{Float64}, y::Vector{Bool}, strata::Vec
     )
 end
 
-# Internal: Compute derivatives for conditional logistic regression
+# Internal: preallocated per-stratum buffers for _compute_clogit_derivatives,
+# sized for the largest stratum
+function _clogit_workspace(strata_indices::Dict{Int, Vector{Int}}, p::Int)
+    max_ns = isempty(strata_indices) ? 0 :
+             maximum(length(ix) for ix in values(strata_indices))
+    return (
+        Xs = Matrix{Float64}(undef, max_ns, p),      # stratum design matrix
+        Xw = Matrix{Float64}(undef, max_ns, p),      # sqrt(prob)-weighted rows
+        eta = Vector{Float64}(undef, max_ns),        # linear predictor
+        probs = Vector{Float64}(undef, max_ns),      # softmax probabilities
+        xexp = Vector{Float64}(undef, p),            # E[X] within stratum
+    )
+end
+
+# Internal: Compute derivatives for conditional logistic regression.
+# Accumulates the Hessian in place via BLAS (gemm on sqrt-weighted rows for
+# -E[XX'], ger! for the +E[X]E[X]' rank-1 update) instead of allocating a
+# p×p outer product per observation.
 function _compute_clogit_derivatives(X::Matrix{Float64}, y::Vector{Bool},
-                                     strata_indices::Dict{Int, Vector{Int}}, beta::Vector{Float64})
+                                     strata_indices::Dict{Int, Vector{Int}}, beta::Vector{Float64},
+                                     work=_clogit_workspace(strata_indices, size(X, 2)))
     n, p = size(X)
 
     ll = 0.0
     grad = zeros(p)
     hess = zeros(p, p)
+    xexp = work.xexp
 
     for (stratum, indices) in strata_indices
-        # Get data for this stratum
-        X_s = X[indices, :]
-        y_s = y[indices]
         n_s = length(indices)
 
+        # Find the case (event that occurred)
+        case_idx = 0
+        @inbounds for (a, idx) in enumerate(indices)
+            if y[idx]
+                case_idx = a
+                break
+            end
+        end
+        case_idx == 0 && continue
+
+        # Copy the stratum rows into the contiguous work buffer
+        X_s = view(work.Xs, 1:n_s, :)
+        @inbounds for k in 1:p, a in 1:n_s
+            X_s[a, k] = X[indices[a], k]
+        end
+
         # Linear predictor
-        eta = X_s * beta
+        eta = view(work.eta, 1:n_s)
+        mul!(eta, X_s, beta)
 
         # Numerical stability: subtract max
         eta_max = maximum(eta)
-        exp_eta = exp.(eta .- eta_max)
-        sum_exp_eta = sum(exp_eta)
-
-        # Probabilities
-        probs = exp_eta ./ sum_exp_eta
-
-        # Find the case (event that occurred)
-        case_idx = findfirst(y_s)
-        if isnothing(case_idx)
-            continue
+        probs = view(work.probs, 1:n_s)
+        sum_exp_eta = 0.0
+        @inbounds for a in 1:n_s
+            probs[a] = exp(eta[a] - eta_max)
+            sum_exp_eta += probs[a]
         end
 
         # Log-likelihood contribution
         ll += eta[case_idx] - eta_max - log(sum_exp_eta)
 
+        # Probabilities
+        probs ./= sum_exp_eta
+
         # Gradient contribution: X_case - E[X]
-        x_case = X_s[case_idx, :]
-        x_expected = X_s' * probs
-        grad .+= x_case .- x_expected
+        mul!(xexp, transpose(X_s), probs)
+        @inbounds for k in 1:p
+            grad[k] += X_s[case_idx, k] - xexp[k]
+        end
 
         # Hessian contribution: -Var[X] = -(E[XX'] - E[X]E[X]')
-        for i in 1:n_s
-            hess .-= probs[i] .* (X_s[i, :] * X_s[i, :]')
+        Xw = view(work.Xw, 1:n_s, :)
+        @inbounds for a in 1:n_s
+            probs[a] = sqrt(probs[a])
         end
-        hess .+= x_expected * x_expected'
+        @inbounds for k in 1:p, a in 1:n_s
+            Xw[a, k] = probs[a] * X_s[a, k]
+        end
+        mul!(hess, transpose(Xw), Xw, -1.0, 1.0)
+        BLAS.ger!(1.0, xexp, xexp, hess)
     end
 
     return ll, grad, hess

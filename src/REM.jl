@@ -18,7 +18,15 @@ using LinearAlgebra
 using Printf
 using Random
 using Statistics
+using StatsAPI
 using StatsBase
+
+# StatsAPI generics extended for REMResult (shared with StatsBase, GLM, ...)
+import StatsAPI: coef, stderror, coeftable
+
+# Shared result-presentation infrastructure (Network.jl): the R-style
+# coefficient table used by every model package in the ecosystem
+using Network: print_coeftable
 
 # Core types
 export Event, EventSequence, RiskSet
@@ -28,7 +36,7 @@ export ActorSet, NodeAttribute
 export load_events, load_events!
 
 # Statistics types and computation
-export AbstractStatistic, compute, name, StatisticSet, compute_all
+export AbstractStatistic, compute, name, StatisticSet, compute_all, compute_all!
 export DyadStatistic, DegreeStatistic, TriangleStatistic, FourCycleStatistic
 export NodeStatistic, InteractionStatistic
 
@@ -47,14 +55,16 @@ export CommonNeighbors, GeometricWeightedTriads
 export FourCycle, GeometricWeightedFourCycles
 
 # Specific statistics - Node attributes
-export NodeMatch, NodeMix, NodeDifference, NodeSum, NodeProduct
+export AttributeMatch, NodeMix, NodeDifference, NodeSum, NodeProduct
 export SenderAttribute, ReceiverAttribute
 export SenderCategorical, ReceiverCategorical
 
 # Network state
-export NetworkState, update!, reset!
+export EventNetworkState, update!, reset!
 export get_dyad_count, get_undirected_count, get_out_degree, get_in_degree
-export get_out_neighbors, get_in_neighbors, has_edge
+# `has_edge` is intentionally not exported (it would collide with
+# Graphs.has_edge); call it as `REM.has_edge`
+export get_out_neighbors, get_in_neighbors
 
 # Observation and estimation
 export Observation, CaseControlSampler
@@ -77,5 +87,9 @@ include("statistics/fourcycle.jl")
 include("statistics/node.jl")
 include("observation.jl")
 include("estimation.jl")
+
+# `EventSequence(::NetworkDynamic.DynamicNetwork)` is provided by the
+# REMNetworkDynamicExt package extension, loaded automatically when
+# NetworkDynamic.jl is present in the environment (see ext/).
 
 end # module

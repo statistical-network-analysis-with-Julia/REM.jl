@@ -63,6 +63,7 @@ seq = load_events(df)
 
 ### Loading from CSV
 
+<!-- skip-check -->
 ```julia
 seq = load_events("path/to/events.csv")
 ```
@@ -106,7 +107,7 @@ REM.jl provides many statistics organized by type:
 | **Degree** | `SenderActivity`, `ReceiverPopularity`, `TotalDegree`, `LogDegree` | Actor activity/popularity |
 | **Triangle** | `TransitiveClosure`, `CyclicClosure`, `SharedSender`, `SharedReceiver` | Triadic closure patterns |
 | **Four-Cycle** | `FourCycle`, `GeometricWeightedFourCycles` | Local clustering effects |
-| **Node Attribute** | `NodeMatch`, `NodeMix`, `NodeDifference`, `SenderAttribute` | Homophily and covariate effects |
+| **Node Attribute** | `AttributeMatch`, `NodeMix`, `NodeDifference`, `SenderAttribute` | Homophily and covariate effects |
 
 ### Example: Comprehensive Model
 
@@ -129,7 +130,7 @@ stats = [
     CyclicClosure(),
 
     # Attribute effects
-    NodeMatch(gender),
+    AttributeMatch(gender),
 ]
 ```
 

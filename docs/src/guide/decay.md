@@ -70,11 +70,11 @@ result = fit_rem(seq, stats;
 )
 ```
 
-### With NetworkState
+### With EventNetworkState
 
 ```julia
 # Create state with decay
-state = NetworkState(seq; decay=halflife_to_decay(10.0))
+state = EventNetworkState(seq; decay=halflife_to_decay(10.0))
 
 # Process events - decay is applied automatically as time advances
 for event in seq
@@ -107,7 +107,7 @@ seq = EventSequence(events)
 
 # Halflife of 24 hours = one day decay
 decay = halflife_to_decay(24.0)
-state = NetworkState(seq; decay=decay)
+state = EventNetworkState(seq; decay=decay)
 ```
 
 ### DateTime Timestamps
@@ -125,7 +125,7 @@ seq = EventSequence(events)
 
 # Halflife of 1 hour = 3600 seconds
 decay = halflife_to_decay(3600.0)
-state = NetworkState(seq; decay=decay)
+state = EventNetworkState(seq; decay=decay)
 ```
 
 ### Date Timestamps
@@ -143,7 +143,7 @@ seq = EventSequence(events)
 
 # Halflife of 7 days = 7 * 86400 seconds
 decay = halflife_to_decay(7.0 * 86400)
-state = NetworkState(seq; decay=decay)
+state = EventNetworkState(seq; decay=decay)
 ```
 
 ## How Decay Affects Statistics
@@ -175,7 +175,7 @@ seq = EventSequence(events)
 
 # Halflife of 10 time units
 decay = halflife_to_decay(10.0)
-state = NetworkState(seq; decay=decay)
+state = EventNetworkState(seq; decay=decay)
 
 # After first event
 update!(state, seq[1])
@@ -254,7 +254,7 @@ There are two ways to model time effects:
 
 ### Global Decay
 
-Affects **all** statistics through NetworkState:
+Affects **all** statistics through EventNetworkState:
 
 ```julia
 # All statistics use decayed counts

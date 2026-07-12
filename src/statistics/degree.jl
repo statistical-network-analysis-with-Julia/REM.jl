@@ -19,7 +19,7 @@ struct SenderActivity <: DegreeStatistic
     SenderActivity(; name::String="sender_activity") = new(name)
 end
 
-function compute(stat::SenderActivity, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::SenderActivity, state::EventNetworkState, sender::Int, receiver::Int)
     return get_out_degree(state, sender)
 end
 
@@ -40,7 +40,7 @@ struct ReceiverActivity <: DegreeStatistic
     ReceiverActivity(; name::String="receiver_activity") = new(name)
 end
 
-function compute(stat::ReceiverActivity, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::ReceiverActivity, state::EventNetworkState, sender::Int, receiver::Int)
     return get_out_degree(state, receiver)
 end
 
@@ -61,7 +61,7 @@ struct SenderPopularity <: DegreeStatistic
     SenderPopularity(; name::String="sender_popularity") = new(name)
 end
 
-function compute(stat::SenderPopularity, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::SenderPopularity, state::EventNetworkState, sender::Int, receiver::Int)
     return get_in_degree(state, sender)
 end
 
@@ -82,7 +82,7 @@ struct ReceiverPopularity <: DegreeStatistic
     ReceiverPopularity(; name::String="receiver_popularity") = new(name)
 end
 
-function compute(stat::ReceiverPopularity, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::ReceiverPopularity, state::EventNetworkState, sender::Int, receiver::Int)
     return get_in_degree(state, receiver)
 end
 
@@ -108,7 +108,7 @@ struct TotalDegree <: DegreeStatistic
     end
 end
 
-function compute(stat::TotalDegree, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::TotalDegree, state::EventNetworkState, sender::Int, receiver::Int)
     actor = stat.role == :sender ? sender : receiver
     return get_out_degree(state, actor) + get_in_degree(state, actor)
 end
@@ -137,7 +137,7 @@ struct DegreeDifference <: DegreeStatistic
     end
 end
 
-function compute(stat::DegreeDifference, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::DegreeDifference, state::EventNetworkState, sender::Int, receiver::Int)
     if stat.degree_type == :out
         sender_deg = get_out_degree(state, sender)
         receiver_deg = get_out_degree(state, receiver)
@@ -179,7 +179,7 @@ struct LogDegree <: DegreeStatistic
     end
 end
 
-function compute(stat::LogDegree, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::LogDegree, state::EventNetworkState, sender::Int, receiver::Int)
     actor = stat.role == :sender ? sender : receiver
 
     if stat.degree_type == :out

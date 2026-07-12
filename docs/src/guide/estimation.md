@@ -220,7 +220,7 @@ Coefficients are log-hazard ratios. A coefficient β means:
 | Reciprocity | 0.8 | 2.23 | Past r→s events double the rate |
 | SenderActivity | -0.1 | 0.90 | High-activity senders have 10% lower per-dyad rates |
 | TransitiveClosure | 0.3 | 1.35 | Each shared partner increases rate by 35% |
-| NodeMatch | 0.4 | 1.49 | Same-attribute dyads are 49% more likely |
+| AttributeMatch | 0.4 | 1.49 | Same-attribute dyads are 49% more likely |
 
 ### Confidence Intervals
 

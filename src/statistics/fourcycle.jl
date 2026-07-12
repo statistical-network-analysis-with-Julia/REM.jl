@@ -36,7 +36,7 @@ struct FourCycle <: FourCycleStatistic
     end
 end
 
-function compute(stat::FourCycle, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::FourCycle, state::EventNetworkState, sender::Int, receiver::Int)
     if stat.cycle_type == :out_out
         return _compute_out_out(stat, state, sender, receiver)
     elseif stat.cycle_type == :in_in
@@ -54,7 +54,7 @@ function compute(stat::FourCycle, state::NetworkState, sender::Int, receiver::In
 end
 
 # s→j←k→r: sender and k both send to j, k sends to receiver
-function _compute_out_out(stat::FourCycle, state::NetworkState, sender::Int, receiver::Int)
+function _compute_out_out(stat::FourCycle, state::EventNetworkState, sender::Int, receiver::Int)
     count = 0.0
     out_neighbors_s = get_out_neighbors(state, sender)
     in_neighbors_r = get_in_neighbors(state, receiver)
@@ -87,7 +87,7 @@ function _compute_out_out(stat::FourCycle, state::NetworkState, sender::Int, rec
 end
 
 # s←j→k←r: j sends to both sender and k, receiver sends to k
-function _compute_in_in(stat::FourCycle, state::NetworkState, sender::Int, receiver::Int)
+function _compute_in_in(stat::FourCycle, state::EventNetworkState, sender::Int, receiver::Int)
     count = 0.0
     in_neighbors_s = get_in_neighbors(state, sender)
     out_neighbors_r = get_out_neighbors(state, receiver)
@@ -120,7 +120,7 @@ function _compute_in_in(stat::FourCycle, state::NetworkState, sender::Int, recei
 end
 
 # s→j→k→r: chain from sender through j and k to receiver
-function _compute_out_in(stat::FourCycle, state::NetworkState, sender::Int, receiver::Int)
+function _compute_out_in(stat::FourCycle, state::EventNetworkState, sender::Int, receiver::Int)
     count = 0.0
     out_neighbors_s = get_out_neighbors(state, sender)
     in_neighbors_r = get_in_neighbors(state, receiver)
@@ -152,7 +152,7 @@ function _compute_out_in(stat::FourCycle, state::NetworkState, sender::Int, rece
 end
 
 # s←j←k←r: reverse chain from receiver through k and j to sender
-function _compute_in_out(stat::FourCycle, state::NetworkState, sender::Int, receiver::Int)
+function _compute_in_out(stat::FourCycle, state::EventNetworkState, sender::Int, receiver::Int)
     count = 0.0
     in_neighbors_s = get_in_neighbors(state, sender)
     out_neighbors_r = get_out_neighbors(state, receiver)
@@ -211,7 +211,7 @@ struct GeometricWeightedFourCycles <: FourCycleStatistic
     end
 end
 
-function compute(stat::GeometricWeightedFourCycles, state::NetworkState, sender::Int, receiver::Int)
+function compute(stat::GeometricWeightedFourCycles, state::EventNetworkState, sender::Int, receiver::Int)
     # Get unweighted count first
     base_stat = FourCycle(cycle_type=stat.cycle_type, weighted=false)
     n = compute(base_stat, state, sender, receiver)

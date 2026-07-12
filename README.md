@@ -4,7 +4,7 @@
 [![Build Status](https://github.com/statistical-network-analysis-with-Julia/REM.jl/actions/workflows/CI.yml/badge.svg?branch=main)](https://github.com/statistical-network-analysis-with-Julia/REM.jl/actions/workflows/CI.yml?query=branch%3Amain)
 [![Documentation](https://img.shields.io/badge/docs-stable-blue.svg)](https://statistical-network-analysis-with-Julia.github.io/REM.jl/stable/)
 [![Documentation](https://img.shields.io/badge/docs-dev-blue.svg)](https://statistical-network-analysis-with-Julia.github.io/REM.jl/dev/)
-[![Julia](https://img.shields.io/badge/Julia-1.9+-purple.svg)](https://julialang.org/)
+[![Julia](https://img.shields.io/badge/Julia-1.12+-purple.svg)](https://julialang.org/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
 <p align="center">
@@ -39,6 +39,7 @@ Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/REM.jl")
 
 Statistics based on the history of events between specific actor pairs.
 
+<!-- skip-check -->
 ```julia
 Repetition(; directed=true)      # Past events from sender to receiver
 Reciprocity()                    # Past events from receiver to sender
@@ -51,6 +52,7 @@ DyadCovariate(attr)              # Dyad-level covariate value
 
 Statistics measuring actor activity and popularity levels.
 
+<!-- skip-check -->
 ```julia
 SenderActivity()                 # Sender's out-degree (past sending activity)
 ReceiverActivity()               # Receiver's out-degree (receiver's sending history)
@@ -65,6 +67,7 @@ LogDegree(; role=:sender)        # Log-transformed degree statistic
 
 Statistics capturing triadic closure patterns in directed networks.
 
+<!-- skip-check -->
 ```julia
 TransitiveClosure()              # s→k→r patterns (transitive triads)
 CyclicClosure()                  # r→k→s patterns (cyclic triads)
@@ -78,6 +81,7 @@ GeometricWeightedTriads(α=0.5)   # Geometrically weighted triadic effects
 
 Statistics measuring local clustering through four-cycle configurations.
 
+<!-- skip-check -->
 ```julia
 FourCycle(; cycle_types=[:all])           # Various four-cycle configurations
 GeometricWeightedFourCycles(α=0.5)        # Geometrically weighted four-cycles
@@ -87,8 +91,9 @@ GeometricWeightedFourCycles(α=0.5)        # Geometrically weighted four-cycles
 
 Statistics based on actor-level attributes for homophily and covariate effects.
 
+<!-- skip-check -->
 ```julia
-NodeMatch(attr)                  # Binary: 1 if sender and receiver match
+AttributeMatch(attr)                  # Binary: 1 if sender and receiver match
 NodeMix(attr; sender_val, receiver_val)  # Specific attribute combinations
 NodeDifference(attr; absolute=false)     # Numeric difference between actors
 NodeSum(attr)                    # Sum of sender and receiver attributes
@@ -178,14 +183,14 @@ Support for exponential decay of network effects, where older events contribute 
 decay = halflife_to_decay(10.0)
 
 # Create network state with decay
-state = NetworkState(seq; decay=decay)
+state = EventNetworkState(seq; decay=decay)
 
 # Fit model with decay
 result = fit_rem(seq, stats; n_controls=100, decay=decay)
 
 # Utility functions
 decay_to_halflife(decay)              # Convert decay rate back to halflife
-compute_decay_weight(decay, elapsed)  # Compute weight for elapsed time
+compute_decay_weight(decay, 5.0)      # Weight of an event 5 time units old
 ```
 
 ### Node Attributes
@@ -199,7 +204,7 @@ age = NodeAttribute(:age, Dict(1 => 25.0, 2 => 30.0, 3 => 28.0), 0.0)
 
 # Use in statistics
 stats = [
-    NodeMatch(gender),            # Homophily: same gender
+    AttributeMatch(gender),            # Homophily: same gender
     NodeDifference(age),          # Age difference effect
     SenderAttribute(age),         # Sender's age effect
     NodeMix(gender; sender_val="M", receiver_val="F")  # M→F pattern
@@ -241,14 +246,34 @@ df_typed = DataFrame(
 seq = load_events(df_typed; type_col=:type, weight_col=:weight)
 ```
 
+### From a DynamicNetwork (NetworkDynamic.jl extension)
+
+```julia
+using REM, NetworkDynamic   # loading both activates the REMNetworkDynamicExt extension
+
+dnet = DynamicNetwork(10; observation_start=0.0, observation_end=100.0)
+activate!(dnet, 1.0, 3.0; edge=(1, 2))
+activate!(dnet, 2.0, 5.0; edge=(2, 3))
+
+# Each edge activation spell becomes one event at its onset time
+seq = EventSequence(dnet)
+result = fit_rem(seq, [Repetition(), Reciprocity()]; n_controls=20)
+```
+
+Onset-censored spells are skipped by default (pass
+`include_onset_censored=true` to keep them). REM.jl has no hard
+dependency on the network stack; the `EventSequence(::DynamicNetwork)`
+method lives in a package extension compiled only when NetworkDynamic.jl
+is present in the environment.
+
 ### Computing Statistics Without Fitting
 
 ```julia
 # Compute statistics for all events (without case-control sampling)
 stats_df = compute_statistics(seq, stats)
 
-# Access NetworkState for custom computation
-state = NetworkState(seq; decay=0.0)
+# Access EventNetworkState for custom computation
+state = EventNetworkState(seq; decay=0.0)
 for event in seq
     # Compute statistics before updating state
     values = compute_all(stats, state, event.sender, event.receiver)
@@ -265,7 +290,7 @@ end
 halflife_to_decay(halflife)          # Convert halflife to decay parameter
 decay_to_halflife(decay)             # Convert decay to halflife
 
-# NetworkState accessors
+# EventNetworkState accessors
 get_dyad_count(state, s, r)          # Events from s to r
 get_undirected_count(state, i, j)    # Events between i and j (either direction)
 get_out_degree(state, actor)         # Actor's out-degree

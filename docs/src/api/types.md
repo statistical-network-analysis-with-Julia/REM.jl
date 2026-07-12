@@ -38,12 +38,12 @@ RiskSet
 
 ## Network State
 
-The `NetworkState` type maintains the cumulative state of the network as events are processed. It tracks dyad counts, degrees, and neighbor sets, optionally with exponential decay.
+The `EventNetworkState` type maintains the cumulative state of the network as events are processed. It tracks dyad counts, degrees, and neighbor sets, optionally with exponential decay.
 
-### NetworkState
+### EventNetworkState
 
 ```@docs
-NetworkState
+EventNetworkState
 ```
 
 ### State Updates

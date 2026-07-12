@@ -3,6 +3,12 @@ using Test
 using DataFrames
 using Dates
 using Random
+# Loading NetworkDynamic activates the REMNetworkDynamicExt package extension
+using NetworkDynamic
+# Cross-family co-loading: REM must compose with the stats ecosystem
+using Statistics
+using StatsBase
+import StatsAPI
 
 @testset "REM.jl" begin
     @testset "Event and EventSequence" begin
@@ -65,7 +71,7 @@ using Random
         @test seq_names.n_actors == 3
     end
 
-    @testset "NetworkState" begin
+    @testset "EventNetworkState" begin
         events = [
             Event(1, 2, 1.0),
             Event(2, 1, 2.0),
@@ -73,7 +79,7 @@ using Random
             Event(1, 3, 4.0)
         ]
         seq = EventSequence(events)
-        state = NetworkState(seq)
+        state = EventNetworkState(seq)
 
         # Process events
         for e in seq
@@ -88,8 +94,80 @@ using Random
         @test get_out_degree(state, 1) == 3.0
         @test get_in_degree(state, 2) == 2.0
 
-        @test has_edge(state, 1, 2)
-        @test !has_edge(state, 3, 1)
+        # has_edge is unexported (it would collide with Graphs.has_edge)
+        @test REM.has_edge(state, 1, 2)
+        @test !REM.has_edge(state, 3, 1)
+    end
+
+    @testset "Lazy decay matches eager reference" begin
+        # Counts are stored as (value, last_update_time) and decayed on
+        # read; this must agree with the eager reference that multiplies
+        # every nonzero count by exp(-decay·Δt) at every event.
+        rng = Random.Xoshiro(99)
+        n = 12
+        decay = halflife_to_decay(7.0)
+
+        events = Event{Float64}[]
+        t = 0.0
+        while length(events) < 300
+            s, r = rand(rng, 1:n), rand(rng, 1:n)
+            s == r && continue
+            t += 2 * rand(rng)
+            push!(events, Event(s, r, t; weight=0.5 + rand(rng)))
+        end
+        seq = EventSequence(events)
+        state = EventNetworkState(seq; decay=decay)
+
+        # Eager reference implementation
+        ref_dyad = Dict{Tuple{Int,Int}, Float64}()
+        ref_und = Dict{Tuple{Int,Int}, Float64}()
+        ref_out = Dict{Int, Float64}()
+        ref_in = Dict{Int, Float64}()
+        t_ref = 0.0
+
+        for e in seq
+            f = exp(-decay * (e.time - t_ref))
+            for d in (ref_dyad, ref_und)
+                map!(v -> v * f, values(d))
+            end
+            for d in (ref_out, ref_in)
+                map!(v -> v * f, values(d))
+            end
+            t_ref = e.time
+
+            ref_dyad[(e.sender, e.receiver)] =
+                get(ref_dyad, (e.sender, e.receiver), 0.0) + e.weight
+            ref_und[minmax(e.sender, e.receiver)] =
+                get(ref_und, minmax(e.sender, e.receiver), 0.0) + e.weight
+            ref_out[e.sender] = get(ref_out, e.sender, 0.0) + e.weight
+            ref_in[e.receiver] = get(ref_in, e.receiver, 0.0) + e.weight
+
+            update!(state, e)
+
+            for s in 1:n, r in 1:n
+                s == r && continue
+                @test get_dyad_count(state, s, r) ≈
+                      get(ref_dyad, (s, r), 0.0) atol = 1e-12
+                @test get_undirected_count(state, s, r) ≈
+                      get(ref_und, minmax(s, r), 0.0) atol = 1e-12
+            end
+            for a in 1:n
+                @test get_out_degree(state, a) ≈ get(ref_out, a, 0.0) atol = 1e-12
+                @test get_in_degree(state, a) ≈ get(ref_in, a, 0.0) atol = 1e-12
+            end
+        end
+
+        # Reading at a later clock time decays further, without an update
+        f = exp(-decay * 5.0)
+        expected = get_dyad_count(state, events[end].sender, events[end].receiver) * f
+        state.current_time = t + 5.0
+        @test get_dyad_count(state, events[end].sender, events[end].receiver) ≈
+              expected atol = 1e-12
+
+        # apply_decay! materializes without changing read values
+        before = [get_out_degree(state, a) for a in 1:n]
+        REM.apply_decay!(state, state.current_time)
+        @test [get_out_degree(state, a) for a in 1:n] ≈ before atol = 1e-12
     end
 
     @testset "Calendar timelines" begin
@@ -99,7 +177,7 @@ using Random
             Event(1, 2, DateTime(2024, 1, 1, 1, 0, 0))
         ]
         seq_dt = EventSequence(dt_events)
-        state_dt = NetworkState(seq_dt; decay=halflife_to_decay(3600.0))
+        state_dt = EventNetworkState(seq_dt; decay=halflife_to_decay(3600.0))
 
         update!(state_dt, seq_dt[1])
         update!(state_dt, seq_dt[2])
@@ -111,7 +189,7 @@ using Random
             Event(2, 1, Date(2024, 1, 2))
         ]
         seq_date = EventSequence(date_events)
-        state_date = NetworkState(seq_date)
+        state_date = EventNetworkState(seq_date)
         update!(state_date, seq_date[1])
         update!(state_date, seq_date[2])
         state_date.current_time = Date(2024, 1, 3)
@@ -127,7 +205,7 @@ using Random
             Event(1, 2, 3.0)
         ]
         seq = EventSequence(events)
-        state = NetworkState(seq)
+        state = EventNetworkState(seq)
 
         # Process first two events
         update!(state, seq[1])
@@ -158,7 +236,7 @@ using Random
             Event(2, 3, 3.0)
         ]
         seq = EventSequence(events)
-        state = NetworkState(seq)
+        state = EventNetworkState(seq)
 
         for e in seq
             update!(state, e)
@@ -182,7 +260,7 @@ using Random
             Event(2, 3, 2.0)
         ]
         seq = EventSequence(events)
-        state = NetworkState(seq)
+        state = EventNetworkState(seq)
 
         for e in seq
             update!(state, e)
@@ -202,9 +280,9 @@ using Random
         # Create node attribute
         gender = NodeAttribute(:gender, Dict(1 => "M", 2 => "M", 3 => "F"), "Unknown")
 
-        # Test NodeMatch
-        match = NodeMatch(gender)
-        state = NetworkState{Float64}()
+        # Test AttributeMatch
+        match = AttributeMatch(gender)
+        state = EventNetworkState{Float64}()
         @test compute(match, state, 1, 2) == 1.0  # Both M
         @test compute(match, state, 1, 3) == 0.0  # M vs F
 
@@ -330,7 +408,7 @@ using Random
         events = [Event(1, 2, 1.0), Event(2, 3, 2.0), Event(1, 3, 3.0),
                   Event(3, 1, 4.0)]
         seq = EventSequence(events)
-        state = NetworkState(seq)
+        state = EventNetworkState(seq)
         for e in seq
             update!(state, e)
         end
@@ -369,6 +447,181 @@ using Random
         bad = copy(obs)
         bad.is_event = [true, true, true, false, true, false]
         @test_throws ArgumentError fit_rem(bad, ["x"])
+        # ... including strata with zero cases
+        bad0 = copy(obs)
+        bad0.is_event = [true, false, true, false, false, false]
+        @test_throws ArgumentError fit_rem(bad0, ["x"])
+    end
+
+    @testset "P-values survive extreme z (no cdf underflow)" begin
+        # 1:1 strata with case−control covariate difference +1 in `a`
+        # strata and −1 in `b` strata: the clogit MLE is β = log(a/b) with
+        # information (a+b)σ(1−σ), σ = a/(a+b). a = 3756, b = 939 gives
+        # z ≈ 38, where the naive 2(1 − Φ(z)) formula (dead for |z| ≳ 8.3)
+        # underflows to exactly 0 but 2·ccdf(Normal(), z) is a nonzero
+        # subnormal. (|z| ≈ 38.4 is the Float64 representability limit:
+        # beyond it even ccdf underflows — at |z| = 40 the true p ≈ 7e-350
+        # is smaller than the smallest subnormal.)
+        a, b = 3756, 939
+        n_strata = a + b
+        x = Float64[]
+        is_event = Bool[]
+        stratum = Int[]
+        for k in 1:n_strata
+            push!(x, k <= a ? 1.0 : 0.0)
+            push!(x, k <= a ? 0.0 : 1.0)
+            append!(is_event, [true, false])
+            append!(stratum, [k, k])
+        end
+        obs = DataFrame(
+            event_index = stratum, sender = fill(1, 2n_strata),
+            receiver = fill(2, 2n_strata), x = x,
+            is_event = is_event, stratum = stratum
+        )
+
+        result = fit_rem(obs, ["x"])
+        @test result.converged
+        @test result.coefficients[1] ≈ log(a / b) atol = 1e-6
+        @test abs(result.z_values[1]) > 37.5
+        p = result.p_values[1]
+        @test p > 0            # the naive 2*(1 - cdf) formula returns exactly 0 here
+        @test p < 1e-300
+        @test issubnormal(p)
+    end
+
+    @testset "StatsAPI co-loading" begin
+        # `using REM, Statistics, StatsBase` must not create export
+        # collisions: REM's coef/stderror/coeftable are StatsAPI methods,
+        # the same generics StatsBase re-exports
+        @test coef === StatsAPI.coef === StatsBase.coef
+        @test stderror === StatsAPI.stderror === StatsBase.stderror
+        @test coeftable === StatsAPI.coeftable
+
+        events = [
+            Event(1, 2, 1.0),
+            Event(2, 1, 2.0),
+            Event(1, 2, 3.0),
+            Event(2, 3, 4.0),
+            Event(3, 1, 5.0),
+            Event(1, 3, 6.0)
+        ]
+        seq = EventSequence(events)
+        fit = fit_rem(seq, [Repetition(), Reciprocity()]; n_controls=5, seed=42)
+
+        # The unqualified generics dispatch to the REMResult methods
+        @test coef(fit) == fit.coefficients
+        @test stderror(fit) == fit.std_errors
+        @test coeftable(fit) isa DataFrame
+        @test StatsBase.coef(fit) == fit.coefficients
+        # ... and Statistics still works alongside
+        @test mean(coef(fit)) ≈ sum(fit.coefficients) / 2
+    end
+
+    @testset "Tuple-backed StatisticSet" begin
+        stats = [Repetition(), Reciprocity(), SenderActivity()]
+        ss = StatisticSet(stats)
+
+        # Tuple storage: the concrete statistic types are in the type
+        # parameter, so compute_all is dispatch-free in the inner loop
+        @test ss.statistics isa Tuple{Repetition, Reciprocity, SenderActivity}
+        @test length(ss) == 3
+        @test ss[2] isa Reciprocity
+        @test collect(ss) == collect(ss.statistics)
+        @test ss.names == [REM.name(s) for s in stats]
+
+        # Construction directly from a tuple, and input validation
+        @test StatisticSet((Repetition(), Reciprocity())).names ==
+              ["repetition", "reciprocity"]
+        @test_throws ArgumentError StatisticSet((Repetition(), 1.0))
+
+        # compute_all / compute_all! agree with the Vector path
+        events = [Event(1, 2, 1.0), Event(2, 1, 2.0), Event(1, 2, 3.0)]
+        seq = EventSequence(events)
+        state = EventNetworkState(seq)
+        update!(state, seq[1])
+        update!(state, seq[2])
+        state.current_time = seq[3].time
+
+        expected = compute_all(stats, state, 1, 2)
+        @test compute_all(ss, state, 1, 2) == expected
+        dest = zeros(3)
+        @test compute_all!(dest, ss, state, 1, 2) === dest
+        @test dest == expected
+
+        # The estimation entry points accept a StatisticSet directly and
+        # match the Vector-based results exactly
+        big_events = [Event(mod1(i, 5), mod1(i + 2, 5), Float64(i)) for i in 1:40]
+        big_seq = EventSequence(big_events)
+        obs_vec = generate_observations(big_seq, stats,
+                                        CaseControlSampler(n_controls=3, seed=11))
+        obs_set = generate_observations(big_seq, ss,
+                                        CaseControlSampler(n_controls=3, seed=11))
+        @test obs_vec == obs_set
+        @test compute_statistics(big_seq, stats) == compute_statistics(big_seq, ss)
+
+        fit_vec = fit_rem(big_seq, stats; n_controls=3, seed=11)
+        fit_set = fit_rem(big_seq, ss; n_controls=3, seed=11)
+        @test coef(fit_vec) == coef(fit_set)
+        @test stderror(fit_vec) == stderror(fit_set)
+    end
+
+    @testset "NetworkDynamic extension: EventSequence(::DynamicNetwork)" begin
+        @test Base.get_extension(REM, :REMNetworkDynamicExt) !== nothing
+
+        # Directed dynamic network: spell onsets become events
+        dnet = DynamicNetwork(4; observation_start=0.0, observation_end=10.0,
+                              directed=true)
+        activate!(dnet, 1.0, 3.0; edge=(1, 2))
+        activate!(dnet, 2.0, 5.0; edge=(2, 3))
+        activate!(dnet, 4.0, 6.0; edge=(1, 2))   # second spell on the same edge
+        activate!(dnet, 5.0, 5.0; edge=(3, 1))   # point spell (instantaneous)
+
+        seq = EventSequence(dnet)
+        @test seq isa EventSequence{Float64}
+        @test length(seq) == 4
+        @test [e.time for e in seq] == [1.0, 2.0, 4.0, 5.0]  # sorted by onset
+        @test (seq[1].sender, seq[1].receiver) == (1, 2)
+        @test (seq[2].sender, seq[2].receiver) == (2, 3)
+        @test (seq[3].sender, seq[3].receiver) == (1, 2)
+        @test (seq[4].sender, seq[4].receiver) == (3, 1)
+        @test all(e.eventtype == :onset for e in seq)
+        @test seq.actors == Set([1, 2, 3])
+
+        # Custom eventtype/weight
+        seq_w = EventSequence(dnet; eventtype=:tie_onset, weight=2.0)
+        @test all(e.eventtype == :tie_onset && e.weight == 2.0 for e in seq_w)
+
+        # Onset-censored spells are skipped by default (their onset is the
+        # observation-window start, not an observed event)
+        add_spell!(dnet, NetworkDynamic.Spell(0.0, 2.0; onset_censored=true);
+                   edge=(2, 4))
+        @test length(EventSequence(dnet)) == 4
+        @test length(EventSequence(dnet; include_onset_censored=true)) == 5
+
+        # Undirected networks: edges are stored (min, max), so the smaller
+        # ID is the sender
+        undnet = DynamicNetwork(3; observation_start=0.0, observation_end=10.0,
+                                directed=false)
+        activate!(undnet, 1.0, 2.0; edge=(3, 2))
+        useq = EventSequence(undnet)
+        @test (useq[1].sender, useq[1].receiver) == (2, 3)
+
+        # The converted sequence feeds straight into the REM pipeline
+        rng = Random.Xoshiro(3)
+        big = DynamicNetwork(6; observation_start=0.0, observation_end=100.0)
+        for t in 1:60
+            i, j = rand(rng, 1:6), rand(rng, 1:6)
+            i == j && continue
+            activate!(big, Float64(t), Float64(t) + 1.0; edge=(i, j))
+        end
+        big_seq = EventSequence(big)
+        result = fit_rem(big_seq, [Repetition(), Reciprocity()];
+                         n_controls=5, seed=1)
+        @test result isa REMResult
+        @test all(isfinite, coef(result))
+
+        # Empty dynamic network converts to an empty sequence
+        @test length(EventSequence(DynamicNetwork(3))) == 0
     end
 
     @testset "Coefficient recovery on simulated data" begin
@@ -381,7 +634,7 @@ using Random
         stats = [Repetition(), Reciprocity()]
 
         dyads = [(s, r) for s in 1:n_actors for r in 1:n_actors if s != r]
-        state = NetworkState{Float64}(n_actors=n_actors)
+        state = EventNetworkState{Float64}(n_actors=n_actors)
         state.actors = Set(1:n_actors)
 
         events = Event{Float64}[]

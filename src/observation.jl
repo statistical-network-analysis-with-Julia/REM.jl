@@ -54,14 +54,16 @@ struct CaseControlSampler
 end
 
 """
-    generate_observations(seq::EventSequence, stats::Vector{<:AbstractStatistic},
-                          sampler::CaseControlSampler; kwargs...) -> DataFrame
+    generate_observations(seq::EventSequence, stats, sampler::CaseControlSampler;
+                          kwargs...) -> DataFrame
 
 Generate observations for model estimation using case-control sampling.
 
 # Arguments
 - `seq::EventSequence`: The event sequence to analyze
-- `stats::Vector{<:AbstractStatistic}`: Statistics to compute
+- `stats`: Statistics to compute (a `StatisticSet` or a vector of statistics;
+  vectors are converted to a tuple-backed `StatisticSet` internally so the
+  inner loop is dispatch-free)
 - `sampler::CaseControlSampler`: Sampling configuration
 
 # Keyword Arguments
@@ -73,7 +75,12 @@ Generate observations for model estimation using case-control sampling.
 # Returns
 - `DataFrame`: Observations with columns for each statistic, plus is_event and stratum
 """
-function generate_observations(seq::EventSequence{T}, stats::Vector{<:AbstractStatistic},
+function generate_observations(seq::EventSequence, stats::Vector{<:AbstractStatistic},
+                               sampler::CaseControlSampler; kwargs...)
+    return generate_observations(seq, StatisticSet(stats), sampler; kwargs...)
+end
+
+function generate_observations(seq::EventSequence{T}, stats::StatisticSet,
                                sampler::CaseControlSampler;
                                start_index::Int=1, end_index::Int=length(seq),
                                decay::Float64=0.0,
@@ -90,7 +97,7 @@ function generate_observations(seq::EventSequence{T}, stats::Vector{<:AbstractSt
     end
 
     # Initialize network state
-    state = NetworkState(seq; decay=decay)
+    state = EventNetworkState(seq; decay=decay)
 
     # Process events before start_index to build initial state
     for i in 1:(start_index - 1)
@@ -111,16 +118,14 @@ function generate_observations(seq::EventSequence{T}, stats::Vector{<:AbstractSt
 
     # Pre-allocate observation storage
     observations = Observation[]
-    stat_names = [name(s) for s in stats]
+    stat_names = stats.names
 
     # Process each event
     for event_idx in start_index:end_index
         event = seq[event_idx]
 
-        # Update state time without adding the event yet
-        if decay > 0 && event.time > state.current_time
-            apply_decay!(state, event.time)
-        end
+        # Advance the state clock without adding the event yet (counts
+        # decay lazily on read relative to current_time)
         state.current_time = event.time
 
         # Compute statistics for the actual event (case)
@@ -200,18 +205,23 @@ function observations_to_dataframe(observations::Vector{Observation}, stat_names
 end
 
 """
-    compute_statistics(seq::EventSequence, stats::Vector{<:AbstractStatistic};
-                       decay::Float64=0.0) -> DataFrame
+    compute_statistics(seq::EventSequence, stats; decay::Float64=0.0) -> DataFrame
 
 Compute statistics for all events in a sequence (without sampling controls).
+`stats` may be a `StatisticSet` or a vector of statistics.
 
 # Returns
 - `DataFrame`: One row per event with computed statistics
 """
-function compute_statistics(seq::EventSequence{T}, stats::Vector{<:AbstractStatistic};
+function compute_statistics(seq::EventSequence, stats::Vector{<:AbstractStatistic};
+                            decay::Float64=0.0)
+    return compute_statistics(seq, StatisticSet(stats); decay=decay)
+end
+
+function compute_statistics(seq::EventSequence{T}, stats::StatisticSet;
                             decay::Float64=0.0) where T
-    state = NetworkState(seq; decay=decay)
-    stat_names = [name(s) for s in stats]
+    state = EventNetworkState(seq; decay=decay)
+    stat_names = stats.names
 
     results = Vector{Vector{Float64}}()
     senders = Int[]
@@ -219,10 +229,8 @@ function compute_statistics(seq::EventSequence{T}, stats::Vector{<:AbstractStati
     times = T[]
 
     for (i, event) in enumerate(seq)
-        # Update time and apply decay
-        if decay > 0 && event.time > state.current_time
-            apply_decay!(state, event.time)
-        end
+        # Advance the state clock (counts decay lazily on read relative
+        # to current_time)
         state.current_time = event.time
 
         # Compute statistics
