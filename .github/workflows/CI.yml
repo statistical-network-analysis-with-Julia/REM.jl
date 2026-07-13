@@ -22,8 +22,9 @@ jobs:
       fail-fast: false
       matrix:
         version:
+          # The ecosystem requires Julia >= 1.12.
           - '1.12'
-          - '1'      # Latest stable
+          - '1'
           - 'nightly'
         os:
           - ubuntu-latest
@@ -32,13 +33,27 @@ jobs:
         arch:
           - x64
         exclude:
-          # Reduce CI load by not running nightly on all platforms
           - version: 'nightly'
             os: macos-latest
           - version: 'nightly'
             os: windows-latest
     steps:
+      # The fifteen packages are independent repositories that find each other
+      # through [sources] path dependencies (`Networks = {path = "../Networks.jl"}`).
+      # A lone checkout has no siblings, so those paths dangle and Pkg fails to
+      # resolve before a single test runs. Rebuild the layout every developer has
+      # locally: this package in a directory named after it, siblings beside it.
       - uses: actions/checkout@v4
+        with:
+          path: REM.jl
+
+      - name: Reconstruct the ecosystem layout
+        shell: bash
+        run: |
+          org=https://github.com/statistical-network-analysis-with-Julia
+          for pkg in Networks NetworkDynamic ERGM; do
+            git clone --depth 1 --quiet "$org/$pkg.jl" "$pkg.jl"
+          done
 
       - uses: julia-actions/setup-julia@v2
         with:
@@ -47,12 +62,15 @@ jobs:
 
       - uses: julia-actions/cache@v2
 
-      - uses: julia-actions/julia-buildpkg@v1
-
-      - uses: julia-actions/julia-runtest@v1
+      - name: Run tests
+        shell: bash
+        working-directory: REM.jl
+        run: julia --project=. -e 'using Pkg; Pkg.test(coverage=true)'
 
       - uses: julia-actions/julia-processcoverage@v1
         if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
+        with:
+          directories: REM.jl/src
 
       - uses: codecov/codecov-action@v4
         if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
