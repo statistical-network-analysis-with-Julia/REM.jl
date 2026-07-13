@@ -8,7 +8,7 @@ Install REM.jl from GitHub:
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Network.jl")
+Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Networks.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/REM.jl")
 ```
@@ -109,7 +109,7 @@ REM.jl provides many statistics organized by type:
 | **Degree** | `SenderActivity`, `ReceiverPopularity`, `TotalDegree`, `LogDegree` | Actor activity/popularity |
 | **Triangle** | `TransitiveClosure`, `CyclicClosure`, `SharedSender`, `SharedReceiver` | Triadic closure patterns |
 | **Four-Cycle** | `FourCycle`, `GeometricWeightedFourCycles` | Local clustering effects |
-| **Node Attribute** | `AttributeMatch`, `NodeMix`, `NodeDifference`, `SenderAttribute` | Homophily and covariate effects |
+| **Node Attribute** | `AttributeMatch`, `ActorMix`, `NodeDifference`, `SenderAttribute` | Homophily and covariate effects |
 
 ### Example: Comprehensive Model
 

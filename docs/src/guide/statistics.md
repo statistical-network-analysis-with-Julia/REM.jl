@@ -303,7 +303,7 @@ Indicator for specific sender-receiver attribute combinations:
 
 ```julia
 # Returns 1.0 if sender is "M" and receiver is "F"
-NodeMix(gender, "M", "F")
+ActorMix(gender, "M", "F")
 ```
 
 **Use case**: Test for asymmetric patterns (e.g., do men contact women more than vice versa?).

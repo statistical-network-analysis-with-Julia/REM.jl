@@ -296,6 +296,12 @@ end
     has_edge(state::EventNetworkState, sender::Int, receiver::Int) -> Bool
 
 Check if there has been at least one event from sender to receiver.
+
+A method of the SHARED `Graphs.has_edge` generic (re-exported by Networks.jl),
+not a REM-local function of the same name — asking "is there a tie from i to j"
+of an accumulated event network is the same question Graphs asks of a graph.
+That is why it can be exported without colliding: `using Graphs, REM` (or
+`using ERGM, REM`) dispatches one generic on the state type.
 """
 function has_edge(state::EventNetworkState, sender::Int, receiver::Int)
     return get_dyad_count(state, sender, receiver) > 0

@@ -24,7 +24,7 @@ Where:
 - $\lambda$ is the decay rate (larger = faster decay)
 - $\Delta t$ is the elapsed time since the event
 - At $\Delta t = 0$: weight = 1.0 (full weight)
-- At $\Delta t = $ halflife: weight = 0.5
+- At $\Delta t = h$, where $h$ is the halflife: weight = 0.5
 
 ## Setting the Decay Rate
 

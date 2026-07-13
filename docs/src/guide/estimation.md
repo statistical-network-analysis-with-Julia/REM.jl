@@ -60,9 +60,40 @@ Controls are sampled **without replacement**. If the actor set is small enough t
 !!! note "Ordinal likelihood"
     REM.jl fits the *ordinal* REM: only event order enters the likelihood; the exact
     inter-event waiting times are not part of the hazard (unlike `relevent::rem.dyad`'s
-    interval likelihood). Tied timestamps are ordered arbitrarily without a tie
-    correction. Standard errors are model-based (inverse information) from the sampled
-    risk set — the standard nested case-control variance.
+    interval likelihood). Standard errors are model-based (inverse information) from the
+    sampled risk set — the standard nested case-control variance.
+
+## Tied event times
+
+The likelihood is a likelihood over the **order** of the events, and the statistics of
+an event are read off the network state as it stands *before* it. So two events sharing
+a timestamp are not a sorting nuisance: whichever is placed first enters the *statistics*
+of the one placed second (its `Repetition`, its `Reciprocity`, its degrees). Sorting a tie
+invents the very thing the model is about.
+
+`fit_rem` therefore **refuses tied data by default** and the policy is explicit
+(`Networks.TIE_POLICIES`, the same vocabulary as `Relevent.fit_obpm`/`fit_timing`):
+
+| `ties=` | what it does |
+|---|---|
+| `:error` (default) | names the tie and throws |
+| `:ordered` | sequence order, no correction (the pre-0.2 behaviour) |
+| `:breslow` | Breslow correction: the state is frozen across the tie block, each tied event is a stratum, all share one denominator |
+| `:efron` | Efron correction: as Breslow, plus the `1 − (j−1)/d` denominator weights on the tied cases — the better approximation, and R's default |
+| `:batch` | refused here: with the state frozen, a simultaneous batch in an ordinal likelihood *is* Breslow |
+
+```julia
+fit_rem(seq, stats; ties=:efron)     # tied data, corrected the way coxph would
+```
+
+This is a Cox partial likelihood, so `:breslow` and `:efron` are the classical
+corrections in the classical sense — `test/fixtures/rem_ties.toml` pins them against
+`survival::coxph(..., ties="breslow"/"efron")` on tied data (agreement < 1e-11).
+
+On tie-free data all four policies produce the identical design and the identical fit.
+`Networks.tie_method(fit)` reports what actually happened (`:none` when the data had no
+ties), and `Networks.approximations(fit)` carries the caveat when a correction was
+applied. A fit with ties in it is never `is_exact`.
 
 ## Generating Observations
 
@@ -70,7 +101,7 @@ Controls are sampled **without replacement**. If the actor set is small enough t
 # A demo sequence and statistics
 events = [Event(1, 2, 1.0), Event(2, 1, 2.0), Event(1, 3, 3.0),
           Event(3, 2, 4.0), Event(2, 3, 5.0), Event(1, 2, 6.0)]
-seq = EventSequence(events)
+seq = EventSequence(events; actors=ActorSet([1, 2, 3]))
 stats = [Repetition(), Reciprocity()]
 
 # Create observations DataFrame
@@ -86,6 +117,8 @@ The resulting DataFrame contains:
 | `receiver` | Receiver ID |
 | `is_event` | `true` for cases, `false` for controls |
 | `stratum` | Stratum ID (groups each case with its controls) |
+| `risk_set_size` | Number of dyads in the stratum's risk set (case included) |
+| `sampling_prob` | Probability each non-case dyad entered the sample as a control |
 | `<stat_name>` | One column per statistic |
 
 ### Options
@@ -95,7 +128,8 @@ obs = generate_observations(seq, stats, sampler;
     start_index = 1,           # First event to include
     end_index = length(seq),   # Last event to include
     decay = 0.0,               # Exponential decay rate
-    at_risk = nothing          # Custom set of actors at risk
+    at_risk = nothing          # Risk set: actor universe, RiskSet,
+                               # per-event vector, or callback (see below)
 )
 ```
 
@@ -108,15 +142,59 @@ The first few events may have unreliable statistics (no history):
 obs = generate_observations(seq, stats, sampler; start_index=6)
 ```
 
-### Custom Risk Sets
+### The Actor Universe and Risk Sets
 
-Specify a custom set of actors at risk:
+The REM likelihood is **conditional on the risk set**: each event competes
+against the other dyads that could have occurred instead. Getting the risk set
+wrong changes the estimand — eligible actors who never happen to send or
+receive an event (isolates, or actors only observed as receivers) still belong
+in the denominator, and dropping them biases activity, popularity and covariate
+effects.
+
+Declare the actor universe on the sequence:
 
 ```julia
-# Only actors 1-2 can send/receive
-at_risk = Set(1:2)
-obs = generate_observations(seq, stats, sampler; at_risk=at_risk)
+# Actors 1-3 are observed in the events; 7 and 42 are eligible isolates
+seq = EventSequence(events; actors=ActorSet([1, 2, 3, 7, 42]))
 ```
+
+If `actors` is omitted, the universe falls back to the observed event endpoints
+("participants only") and `fit_rem` warns, because that is a silent change of
+estimand.
+
+Alternatively, hand the risk set to `generate_observations`/`fit_rem` directly.
+`at_risk` (alias `riskset` in `fit_rem`) accepts:
+
+```julia
+# 1. A static actor universe (ActorSet, Set{Int} or Vector{Int})
+obs = generate_observations(seq, stats, sampler; at_risk=Set(1:10))
+
+# 2. A static RiskSet — senders and receivers may differ
+rs = RiskSet(0, [1, 2, 3], [4, 5, 6])          # e.g. a two-mode network
+obs = generate_observations(seq, stats, sampler; at_risk=rs)
+
+# 3. Per-event risk sets (time-varying membership): one entry per event
+joined = [Set(1:k) for k in eachindex(seq)]
+obs = generate_observations(seq, stats, sampler; at_risk=joined)
+
+# 4. A callback (event_index, state) -> RiskSet, evaluated against the
+#    current network state
+obs = generate_observations(seq, stats, sampler;
+    at_risk = (i, state) -> RiskSet(i, sort!(collect(state.actors)),
+                                    sort!(collect(state.actors))))
+
+result = fit_rem(seq, stats; n_controls=50, at_risk=Set(1:10))
+```
+
+Every case is validated against **its own** risk set before any fitting happens:
+if the event's sender or receiver is not in the risk set (the case and its
+controls would then come from different actor universes), or if the risk set
+admits no valid control, an `ArgumentError` is thrown.
+
+Each stratum records its risk-set size and the probability with which each
+non-case dyad entered the sample as a control, both on the observation DataFrame
+(`risk_set_size`, `sampling_prob`) and on the fitted model
+(`result.risk_set_sizes`, `result.sampling_probs`, aligned with `result.strata`).
 
 ## Fitting Models
 
@@ -176,6 +254,9 @@ The `REMResult` object contains:
 | `n_observations` | `Int` | Total observations |
 | `log_likelihood` | `Float64` | Log-likelihood at convergence |
 | `converged` | `Bool` | Whether optimization converged |
+| `strata` | `Vector{Int}` | Stratum IDs (sorted), indexing the two fields below |
+| `risk_set_sizes` | `Vector{Int}` | Risk-set size of each stratum (case included) |
+| `sampling_probs` | `Vector{Float64}` | Control sampling probability per stratum |
 
 ### Accessor Functions
 

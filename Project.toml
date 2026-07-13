@@ -1,6 +1,6 @@
 name = "REM"
 uuid = "f78d20dc-c2b5-46e6-a2d4-577bd45c3c5a"
-version = "0.1.0"
+version = "0.2.0"
 authors = ["Simone Santoni"]
 
 [deps]
@@ -9,7 +9,7 @@ DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
-Network = "027a387e-e55f-4537-a155-5037e5a23bdb"
+Networks = "027a387e-e55f-4537-a155-5037e5a23bdb"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
@@ -23,17 +23,21 @@ NetworkDynamic = "2ec8e4a1-edb9-4657-8cef-4d333c164b0b"
 REMNetworkDynamicExt = "NetworkDynamic"
 
 [sources]
-Network = {path = "../Network.jl"}
+Networks = {path = "../Networks.jl"}
 NetworkDynamic = {path = "../NetworkDynamic.jl"}
+# Test-only: the co-load test (REM.jl#3) proves `using ERGM, REM` leaves the
+# shared `compute`/`name` verbs usable unqualified. ERGM is NOT a dependency.
+ERGM = {path = "../ERGM.jl"}
 
 [compat]
 CSV = "0.10"
+ERGM = "0.2"
 DataFrames = "1.6"
 Dates = "1.11.0"
 Distributions = "0.25"
 LinearAlgebra = "1.12.0"
-Network = "0.1"
-NetworkDynamic = "0.1"
+Networks = "0.2"
+NetworkDynamic = "0.2"
 Printf = "1.11.0"
 Random = "1.11.0"
 Statistics = "1.11.1"
@@ -42,8 +46,9 @@ StatsBase = "0.34"
 julia = "1.12"
 
 [extras]
+ERGM = "d623cd87-b018-4e2a-bf53-b77ebcdc9da2"
 NetworkDynamic = "2ec8e4a1-edb9-4657-8cef-4d333c164b0b"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["NetworkDynamic", "Test"]
+test = ["ERGM", "NetworkDynamic", "Test"]

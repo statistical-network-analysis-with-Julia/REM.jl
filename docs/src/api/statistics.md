@@ -85,7 +85,7 @@ Statistics incorporating actor-level attributes for homophily and covariate effe
 
 ```@docs
 AttributeMatch
-NodeMix
+ActorMix
 NodeDifference
 NodeSum
 NodeProduct

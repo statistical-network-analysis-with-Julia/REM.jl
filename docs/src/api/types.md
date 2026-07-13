@@ -81,8 +81,5 @@ get_in_neighbors
 
 ## Time Utilities
 
-```@docs
-halflife_to_decay
-decay_to_halflife
-compute_decay_weight
-```
+The decay helpers are documented with the other utilities on the
+[Estimation page](estimation.md#Time-Decay).

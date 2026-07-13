@@ -58,7 +58,7 @@ REMs are widely used in:
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Network.jl")
+Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Networks.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/REM.jl")
 ```
@@ -82,7 +82,9 @@ events = [
     Event(1, 3, 3.0),  # Actor 1 → Actor 3 at time 3.0
     Event(1, 2, 4.0),  # Actor 1 → Actor 2 at time 4.0 (repetition)
 ]
-seq = EventSequence(events)
+# Declare the actor universe (actor 4 is an eligible isolate); omitting
+# `actors` infers it from the observed events and changes the estimand
+seq = EventSequence(events; actors=ActorSet([1, 2, 3, 4]))
 
 # Define model statistics
 stats = [
@@ -160,3 +162,9 @@ This approach is statistically consistent and dramatically reduces computation t
 4. Brandes, U., Lerner, J., Snijders, T.A.B. (2009). Networks evolving step by step: Statistical analysis of dyadic event data. *2009 International Conference on Advances in Social Network Analysis and Mining*, 200-205.
 
 5. Perry, P.O., Wolfe, P.J. (2013). Point process modelling for directed interaction networks. *Journal of the Royal Statistical Society: Series B*, 75(5), 821-849.
+
+## Module
+
+```@docs
+REM
+```

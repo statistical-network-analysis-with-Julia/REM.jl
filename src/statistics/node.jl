@@ -32,10 +32,16 @@ end
 name(stat::AttributeMatch) = stat.stat_name
 
 """
-    NodeMix <: NodeStatistic
+    ActorMix <: NodeStatistic
 
 Measures mixing patterns: indicator for specific sender-receiver attribute combinations.
 Returns 1.0 if sender has value `sender_value` and receiver has `receiver_value`.
+
+Called `NodeMix` before v0.2. The name moved because ERGM.jl exports a *different*
+`NodeMix` (a cross-sectional mixing-matrix term), and two distinct exported types
+sharing a name make the binding ambiguous — undefined, in fact — in any session
+that loads both packages. `REM.NodeMix` survives as a deprecated, non-exported
+alias.
 
 # Fields
 - `attribute::NodeAttribute`: The attribute to check.
@@ -43,26 +49,31 @@ Returns 1.0 if sender has value `sender_value` and receiver has `receiver_value`
 - `receiver_value`: Required receiver attribute value.
 - `stat_name::String`: Name for this statistic.
 """
-struct NodeMix{T} <: NodeStatistic
+struct ActorMix{T} <: NodeStatistic
     attribute::NodeAttribute{T}
     sender_value::T
     receiver_value::T
     stat_name::String
 
-    function NodeMix(attribute::NodeAttribute{T}, sender_value::T, receiver_value::T;
-                     name::String="") where T
+    function ActorMix(attribute::NodeAttribute{T}, sender_value::T, receiver_value::T;
+                      name::String="") where T
         stat_name = isempty(name) ? "mix_$(attribute.name)_$(sender_value)_$(receiver_value)" : name
         new{T}(attribute, sender_value, receiver_value, stat_name)
     end
 end
 
-function compute(stat::NodeMix, state::EventNetworkState, sender::Int, receiver::Int)
+# Deprecated alias for the pre-v0.2 name. NOT exported: exporting it would
+# recreate the very collision with `ERGM.NodeMix` that the rename removes.
+# `REM.NodeMix(...)` still constructs an `ActorMix`, with a deprecation warning.
+Base.@deprecate_binding NodeMix ActorMix false
+
+function compute(stat::ActorMix, state::EventNetworkState, sender::Int, receiver::Int)
     sender_matches = stat.attribute[sender] == stat.sender_value
     receiver_matches = stat.attribute[receiver] == stat.receiver_value
     return (sender_matches && receiver_matches) ? 1.0 : 0.0
 end
 
-name(stat::NodeMix) = stat.stat_name
+name(stat::ActorMix) = stat.stat_name
 
 """
     NodeDifference <: NodeStatistic

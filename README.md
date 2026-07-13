@@ -29,11 +29,11 @@ REM.jl is a port of [eventnet](https://github.com/juergenlerner/eventnet), provi
 ## Installation
 
 Requires Julia 1.12+. REM.jl depends on the unregistered
-[Network.jl](https://github.com/statistical-network-analysis-with-Julia/Network.jl) and [NetworkDynamic.jl](https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl) packages, which must be added first (in this order):
+[Networks.jl](https://github.com/statistical-network-analysis-with-Julia/Networks.jl) and [NetworkDynamic.jl](https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl) packages, which must be added first (in this order):
 
 ```julia
 using Pkg
-Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Network.jl")
+Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/Networks.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/NetworkDynamic.jl")
 Pkg.add(url="https://github.com/statistical-network-analysis-with-Julia/REM.jl")
 ```
@@ -104,7 +104,7 @@ Statistics based on actor-level attributes for homophily and covariate effects.
 <!-- skip-check -->
 ```julia
 AttributeMatch(attr)                  # Binary: 1 if sender and receiver match
-NodeMix(attr; sender_val, receiver_val)  # Specific attribute combinations
+ActorMix(attr; sender_val, receiver_val)  # Specific attribute combinations
 NodeDifference(attr; absolute=false)     # Numeric difference between actors
 NodeSum(attr)                    # Sum of sender and receiver attributes
 NodeProduct(attr)                # Product of sender and receiver attributes
@@ -128,7 +128,10 @@ events = [
     Event(1, 3, 3.0),  # Actor 1 sends to Actor 3 at time 3.0
     Event(3, 2, 4.0),  # Actor 3 sends to Actor 2 at time 4.0
 ]
-seq = EventSequence(events)
+# Declare the actor universe: actor 4 is eligible but never observed
+# (omitting `actors` infers it from the events, which drops such isolates
+# from the risk set and changes the estimand)
+seq = EventSequence(events; actors=ActorSet([1, 2, 3, 4]))
 
 # Define statistics to model
 stats = [
@@ -223,7 +226,7 @@ stats = [
     AttributeMatch(gender),            # Homophily: same gender
     NodeDifference(age),          # Age difference effect
     SenderAttribute(age),         # Sender's age effect
-    NodeMix(gender, "M", "F"),    # M→F mixing pattern
+    ActorMix(gender, "M", "F"),    # M→F mixing pattern
 ]
 ```
 

@@ -238,10 +238,12 @@ Options:
   default (their recorded onset is the observation-window start, not an
   observed event).
 
+- `actors=nothing` — by default the actor universe is declared from the
+  network's vertex set, so vertices with no edge spell stay in the risk set
+  as isolates. Pass `actors` to override it.
+
 For undirected networks the smaller vertex ID becomes the sender (edges
-are stored with `(min, max)` ordering). Only actors that appear in some
-event end up in `seq.actors`; pass `at_risk` to `generate_observations`
-to widen the risk set to all vertices of the network.
+are stored with `(min, max)` ordering).
 
 REM.jl keeps zero hard dependencies on the network stack: the method
 lives in the `REMNetworkDynamicExt` extension and is compiled only when
@@ -308,7 +310,7 @@ SenderAttribute(age)
 ReceiverAttribute(age)
 
 # Specific combinations
-NodeMix(gender, "M", "F")  # Male sender, female receiver
+ActorMix(gender, "M", "F")  # Male sender, female receiver
 ```
 
 ## Actor Sets
