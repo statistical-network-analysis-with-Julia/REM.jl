@@ -163,6 +163,22 @@ This approach is statistically consistent and dramatically reduces computation t
 
 5. Perry, P.O., Wolfe, P.J. (2013). Point process modelling for directed interaction networks. *Journal of the Royal Statistical Society: Series B*, 75(5), 821-849.
 
+
+## Citation
+
+If you use REM.jl in your work, please cite it using the entry in
+[`CITATION.bib`](https://github.com/statistical-network-analysis-with-Julia/REM.jl/blob/main/CITATION.bib):
+
+```biblatex
+@misc{SNWJREMJL,
+  author = {Santoni, Simone},
+  title = {REM.jl: Relational Event Models for Julia},
+  year = {2026},
+  url = {https://github.com/statistical-network-analysis-with-Julia/REM.jl},
+  note = {Homepage: https://statistical-network-analysis-with-Julia.github.io/REM.jl; GitHub: https://github.com/statistical-network-analysis-with-Julia}
+}
+```
+
 ## Module
 
 ```@docs
