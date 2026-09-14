@@ -1,0 +1,11 @@
+sender,receiver,time
+A,B,1
+A,D,2
+B,A,3
+B,C,4
+A,B,5
+D,C,6
+C,B,7
+A,C,8
+A,D,9
+A,C,10

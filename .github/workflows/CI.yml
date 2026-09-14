@@ -1,0 +1,112 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - 'v*'
+  pull_request:
+    branches:
+      - main
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ startsWith(github.ref, 'refs/pull/') }}
+
+jobs:
+  test:
+    name: Julia ${{ matrix.version }} - ${{ matrix.os }} - ${{ matrix.arch }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        version:
+          # The ecosystem requires Julia >= 1.12.
+          - '1.12'
+          - '1'
+          - 'nightly'
+        os:
+          - ubuntu-latest
+          - macos-latest
+          - windows-latest
+        arch:
+          - x64
+        exclude:
+          - version: 'nightly'
+            os: macos-latest
+          - version: 'nightly'
+            os: windows-latest
+        include:
+          # One cell runs multi-threaded so the thread-count-independence
+          # contract is exercised: `control_draw_cov` refits through
+          # `Networks.bootstrap_cov` with one seed per replicate drawn up
+          # front, and the "rng contract" testset asserts that the threaded
+          # loop and the serial loop (`threaded=false`) give bit-identical
+          # covariances in the same process — which at 4 threads is a real
+          # check and at 1 thread a tautology, hence this cell. The same cell
+          # runs the allocation-regression gates.
+          - version: '1.12'
+            os: ubuntu-latest
+            arch: x64
+            threads: '4'
+            gates: 'true'
+    env:
+      JULIA_NUM_THREADS: ${{ matrix.threads || '1' }}
+    steps:
+      # The fifteen packages are independent repositories that find each other
+      # through [sources] path dependencies (`Networks = {path = "../Networks.jl"}`).
+      # A lone checkout has no siblings, so those paths dangle and Pkg fails to
+      # resolve before a single test runs. Rebuild the layout every developer has
+      # locally: this package in a directory named after it, siblings beside it.
+      - uses: actions/checkout@v4
+        with:
+          path: REM.jl
+
+      # The clone list IS the `[sources]` section of Project.toml: Networks
+      # (hard dependency), NetworkDynamic (weakdep, loaded by the test target)
+      # and ERGM (test-only, for the `using ERGM, REM` co-load test). When a
+      # sibling is added to or removed from `[sources]`, change this list too.
+      - name: Reconstruct the ecosystem layout
+        shell: bash
+        run: |
+          org=https://github.com/statistical-network-analysis-with-Julia
+          for pkg in Networks NetworkDynamic ERGM; do
+            git clone --depth 1 --quiet "$org/$pkg.jl" "$pkg.jl"
+          done
+
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: ${{ matrix.version }}
+          arch: ${{ matrix.arch }}
+
+      - uses: julia-actions/cache@v2
+
+      - name: Run tests
+        shell: bash
+        working-directory: REM.jl
+        run: julia --project=. -e 'using Pkg; Pkg.test(coverage=true)'
+
+      # Allocation-regression gates (panel 2026-09, item 7): the 0-byte
+      # derivative kernel and statistic evaluations, and O(events) streaming.
+      # benchmark/Project.toml sources Networks at ../../Networks.jl, which is
+      # the sibling cloned above.
+      - name: Allocation-regression gates
+        if: matrix.gates == 'true'
+        shell: bash
+        working-directory: REM.jl
+        run: |
+          julia --project=benchmark -e 'using Pkg; Pkg.instantiate()'
+          julia --project=benchmark benchmark/regression_tests.jl
+
+      - uses: julia-actions/julia-processcoverage@v1
+        if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
+        with:
+          directories: REM.jl/src
+
+      - uses: codecov/codecov-action@v4
+        if: matrix.version == '1' && matrix.os == 'ubuntu-latest'
+        with:
+          files: lcov.info
+          token: ${{ secrets.CODECOV_TOKEN }}
+          fail_ci_if_error: false

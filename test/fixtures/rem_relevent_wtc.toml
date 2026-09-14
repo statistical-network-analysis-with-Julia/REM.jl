@@ -1,0 +1,55 @@
+name = "rem_relevent_wtc"
+
+[provenance]
+r_version = "4.6.1"
+relevent_version = "1.2.1"
+seed = 20260909
+script = "test/fixtures/r/rem_relevent_wtc.R"
+date = "2026-09-09"
+dataset = "WTC police radio calls (Butts, Petrescu-Prahova & Cross 2007): Networks.jl/data/wtc_police_calls_{events,actors}.tsv, read by R and by Networks.load_dataset(:wtc_police_calls)"
+design = "relevent::rem.dyad(ordinal = TRUE, hessian = TRUE): full risk set of all 37*36 ordered dyads per event"
+fit_method = "MLE (optim BFGS, reltol = 1e-15), observed-information SEs from the numerical Hessian"
+
+[tolerance]
+# The ordinal likelihood is EXACT (a multinomial partial likelihood over
+# the full risk set): no Monte Carlo, no sampling, so both implementations
+# maximize the same function and the only admissible discrepancy is
+# optimizer termination slack — R uses optim/BFGS (reltol = 1e-15) with a
+# finite-difference Hessian, Julia Newton-Raphson with the analytic one.
+# Observed disagreement at the frozen values is < 2e-7 on coefficients and
+# standard errors, and the log-likelihoods agree to < 1e-9 (both sit on
+# the same maximum). 1e-6 is that with an order of magnitude of margin,
+# as Relevent.jl's rem.dyad fixture justifies it.
+default = 1e-6
+# The log-likelihood is compared more tightly: it is the value of the
+# function both optimizers agree they maximized.
+model1_loglik = 1e-8
+model2_loglik = 1e-8
+model3_loglik = 1e-8
+
+[values]
+n_actors = 37
+n_events = 481
+icr_actors = [13, 14, 32]
+risk_set_size = 1332
+
+# --- model 1: CovInt (x_i + x_j) — relevent tutorial wtcfit1; REM.jl NodeSum(icr) ---
+model1_names = ["sum_icr"]
+model1_coefficients = [2.1044655373542098]
+model1_std_errors = [0.069817377059228289]
+model1_loglik = -3096.9991551201642
+model1_loglik_null = -3460.524125379261
+
+# --- model 2: CovSnd + CovRec (x_i, x_j); REM.jl SenderAttribute(icr), ReceiverAttribute(icr) ---
+model2_names = ["sender_icr", "receiver_icr"]
+model2_coefficients = [1.9789175555692529, 2.2258129300158829]
+model2_std_errors = [0.095748657178230459, 0.092861102724483044]
+model2_loglik = -3095.087548591664
+model2_loglik_null = -3460.524125379261
+
+# --- model 3: CovSnd + CovRec + CovEvent(D), D[i,j] = ((7i + 3j) mod 5)/4; REM.jl + DyadCovariate ---
+model3_names = ["sender_icr", "receiver_icr", "dyad_covariate"]
+model3_coefficients = [1.9878650200247663, 2.2330061771637864, -0.19660200427575139]
+model3_std_errors = [0.09601953782292208, 0.093060569521630179, 0.13398033694787553]
+model3_loglik = -3094.0107378940688
+model3_loglik_null = -3460.524125379261
