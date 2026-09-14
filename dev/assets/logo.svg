@@ -1,0 +1,85 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
+  <defs>
+    <!-- Filters for Depth/Shadow -->
+    <filter id="dropShadow" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur in="SourceAlpha" stdDeviation="4"/>
+      <feOffset dx="2" dy="2" result="offsetblur"/>
+      <feComponentTransfer>
+        <feFuncA type="linear" slope="0.3"/>
+      </feComponentTransfer>
+      <feMerge>
+        <feMergeNode in="offsetblur"/>
+        <feMergeNode in="SourceGraphic"/>
+      </feMerge>
+    </filter>
+
+    <!-- Gradients for Julia Colors -->
+    <!-- Purple -->
+    <radialGradient id="grad-purple" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#b57fe3;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#9558B2;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Red -->
+    <radialGradient id="grad-red" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#e65c53;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#CB3C33;stop-opacity:1" />
+    </radialGradient>
+    
+    <!-- Green -->
+    <radialGradient id="grad-green" cx="30%" cy="30%" r="70%">
+      <stop offset="0%" style="stop-color:#5cb84b;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#389826;stop-opacity:1" />
+    </radialGradient>
+
+    <!-- Arrow Marker (Small Size) -->
+    <marker id="arrowhead" markerWidth="5" markerHeight="5" refX="5" refY="2.5" orient="auto">
+      <polygon points="0 0, 5 2.5, 0 5" fill="#4063D8" />
+    </marker>
+  </defs>
+
+  <!-- Background Container (White rounded rect) -->
+  <rect x="24" y="24" width="464" height="464" rx="80" fill="#ffffff" stroke="#e0e0e0" stroke-width="2"/>
+
+  <!-- Main Content Group: Graph + Text -->
+  
+  <!-- Graph (Scaled 0.8, moved up slightly less: -55 instead of -70) -->
+  <g transform="translate(0, -55) scale(0.8) translate(64, 40)">
+      <!-- Connecting Edges (Blue #4063D8) -->
+      <!-- Top -> Right -->
+      <line x1="295" y1="202" x2="373" y2="328" stroke="#4063D8" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead)"/>
+      
+      <!-- Right -> Left -->
+      <line x1="334" y1="390" x2="178" y2="390" stroke="#4063D8" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead)"/>
+      
+      <!-- Left -> Top -->
+      <line x1="139" y1="328" x2="217" y2="202" stroke="#4063D8" stroke-width="12" stroke-linecap="round" marker-end="url(#arrowhead)"/>
+
+      <!-- Nodes (Radius 60) -->
+      <!-- Top: Purple -->
+      <circle cx="256" cy="140" r="60" fill="url(#grad-purple)" stroke="#ffffff" stroke-width="4" filter="url(#dropShadow)"/>
+      
+      <!-- Right: Red -->
+      <circle cx="412" cy="390" r="60" fill="url(#grad-red)" stroke="#ffffff" stroke-width="4" filter="url(#dropShadow)"/>
+      
+      <!-- Left: Green -->
+      <circle cx="100" cy="390" r="60" fill="url(#grad-green)" stroke="#ffffff" stroke-width="4" filter="url(#dropShadow)"/>
+  </g>
+
+  <!-- Text "REM.jl" (Moved up slightly: 450 instead of 460) -->
+  <g transform="translate(256, 450)" text-anchor="middle" font-family="sans-serif" font-weight="900" font-size="80" letter-spacing="2">
+    <!-- R: Purple -->
+    <text x="-120" y="0" fill="#9558B2" filter="url(#dropShadow)">R</text>
+    <!-- E: Red -->
+    <text x="-65" y="0" fill="#CB3C33" filter="url(#dropShadow)">E</text>
+    <!-- M: Green -->
+    <text x="-5" y="0" fill="#389826" filter="url(#dropShadow)">M</text>
+    <!-- .: Dark Grey -->
+    <text x="45" y="0" fill="#555555">.</text>
+    <!-- j: Purple -->
+    <text x="75" y="0" fill="#9558B2" filter="url(#dropShadow)">j</text>
+    <!-- l: Red -->
+    <text x="110" y="0" fill="#CB3C33" filter="url(#dropShadow)">l</text>
+  </g>
+
+</svg>

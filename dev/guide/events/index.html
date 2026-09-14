@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="UTF-8"/><meta name="viewport" content="width=device-width, initial-scale=1.0"/><title>Events and Data · REM.jl</title><meta name="title" content="Events and Data · REM.jl"/><meta property="og:title" content="Events and Data · REM.jl"/><meta property="twitter:title" content="Events and Data · REM.jl"/><meta name="description" content="Documentation for REM.jl."/><meta property="og:description" content="Documentation for REM.jl."/><meta property="twitter:description" content="Documentation for REM.jl."/><meta property="og:url" content="https://statistical-network-analysis-with-Julia.github.io/REM.jl/dev/guide/events/"/><meta property="twitter:url" content="https://statistical-network-analysis-with-Julia.github.io/REM.jl/dev/guide/events/"/><link rel="canonical" href="https://statistical-network-analysis-with-Julia.github.io/REM.jl/dev/guide/events/"/><script data-outdated-warner src="../../assets/warner.js"></script><link href="https://cdnjs.cloudflare.com/ajax/libs/lato-font/3.0.0/css/lato-font.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/juliamono/0.63.2/juliamono.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/fontawesome.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/solid.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/brands.min.css" rel="stylesheet" type="text/css"/><link href="https://cdnjs.cloudflare.com/ajax/libs/KaTeX/0.16.8/katex.min.css" rel="stylesheet" type="text/css"/><script>documenterBaseURL="../.."</script><script src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.3.6/require.min.js" data-main="../../assets/documenter.js"></script><script src="../../search_index.js"></script><script src="../../siteinfo.js"></script><script src="../../../versions.js"></script><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-mocha.css" data-theme-name="catppuccin-mocha"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-macchiato.css" data-theme-name="catppuccin-macchiato"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-frappe.css" data-theme-name="catppuccin-frappe"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/catppuccin-latte.css" data-theme-name="catppuccin-latte"/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-dark.css" data-theme-name="documenter-dark" data-theme-primary-dark/><link class="docs-theme-link" rel="stylesheet" type="text/css" href="../../assets/themes/documenter-light.css" data-theme-name="documenter-light" data-theme-primary/><script src="../../assets/themeswap.js"></script><link href="../../assets/snwj-docs.css" rel="stylesheet" type="text/css"/><script src="../../assets/snwj-docs.js"></script></head><body><div id="documenter"><nav class="docs-sidebar"><a class="docs-logo" href="../../"><img src="../../assets/logo.svg" alt="REM.jl logo"/></a><div class="docs-package-name"><span class="docs-autofit"><a href="../../">REM.jl</a></span></div><button class="docs-search-query input is-rounded is-small is-clickable my-2 mx-auto py-1 px-2" id="documenter-search-query">Search docs (Ctrl + /)</button><ul class="docs-menu"><li><a class="tocitem" href="../../">Home</a></li><li><a class="tocitem" href="../../getting_started/">Getting Started</a></li><li><span class="tocitem">User Guide</span><ul><li class="is-active"><a class="tocitem" href>Events and Data</a><ul class="internal"><li><a class="tocitem" href="#Events"><span>Events</span></a></li><li><a class="tocitem" href="#Event-Sequences"><span>Event Sequences</span></a></li><li><a class="tocitem" href="#Loading-Data"><span>Loading Data</span></a></li><li><a class="tocitem" href="#Node-Attributes"><span>Node Attributes</span></a></li><li><a class="tocitem" href="#Actor-Sets"><span>Actor Sets</span></a></li><li><a class="tocitem" href="#Risk-Sets"><span>Risk Sets</span></a></li><li><a class="tocitem" href="#Working-with-Different-Time-Scales"><span>Working with Different Time Scales</span></a></li><li><a class="tocitem" href="#Data-Validation"><span>Data Validation</span></a></li><li><a class="tocitem" href="#Utility-Functions"><span>Utility Functions</span></a></li></ul></li><li><a class="tocitem" href="../statistics/">Statistics</a></li><li><a class="tocitem" href="../estimation/">Model Estimation</a></li><li><a class="tocitem" href="../decay/">Temporal Decay</a></li></ul></li><li><span class="tocitem">API Reference</span><ul><li><a class="tocitem" href="../../api/types/">Types</a></li><li><a class="tocitem" href="../../api/statistics/">Statistics</a></li><li><a class="tocitem" href="../../api/estimation/">Estimation</a></li></ul></li></ul><div class="docs-version-selector field has-addons"><div class="control"><span class="docs-label button is-static is-size-7">Version</span></div><div class="docs-selector control is-expanded"><div class="select is-fullwidth is-size-7"><select id="documenter-version-selector"></select></div></div></div></nav><div class="docs-main"><header class="docs-navbar"><a class="docs-sidebar-button docs-navbar-link fa-solid fa-bars is-hidden-desktop" id="documenter-sidebar-button" href="#"></a><nav class="breadcrumb"><ul class="is-hidden-mobile"><li><a class="is-disabled">User Guide</a></li><li class="is-active"><a href>Events and Data</a></li></ul><ul class="is-hidden-tablet"><li class="is-active"><a href>Events and Data</a></li></ul></nav><div class="docs-right"><a class="docs-navbar-link" href="https://github.com/Statistical-network-analysis-with-Julia/REM.jl" title="View the repository on GitHub"><span class="docs-icon fa-brands"></span><span class="docs-label is-hidden-touch">GitHub</span></a><a class="docs-navbar-link" href="https://github.com/Statistical-network-analysis-with-Julia/REM.jl/blob/main/docs/src/guide/events.md" title="Edit source on GitHub"><span class="docs-icon fa-solid"></span></a><a class="docs-settings-button docs-navbar-link fa-solid fa-gear" id="documenter-settings-button" href="#" title="Settings"></a><a class="docs-article-toggle-button fa-solid fa-chevron-up" id="documenter-article-toggle-button" href="javascript:;" title="Collapse all docstrings"></a></div></header><article class="content" id="documenter-page"><h1 id="Events-and-Data"><a class="docs-heading-anchor" href="#Events-and-Data">Events and Data</a><a id="Events-and-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Events-and-Data" title="Permalink"></a></h1><p>This guide covers how to work with relational event data in REM.jl.</p><h2 id="Events"><a class="docs-heading-anchor" href="#Events">Events</a><a id="Events-1"></a><a class="docs-heading-anchor-permalink" href="#Events" title="Permalink"></a></h2><p>An <code>Event</code> represents a single directed interaction between actors:</p><pre><code class="language-julia hljs">using REM
+
+# Basic event: sender, receiver, time
+e = Event(1, 2, 1.0)
+
+# With optional event type and weight
+e = Event(1, 2, 1.0; eventtype=:email, weight=2.0)</code></pre><h3 id="Event-Fields"><a class="docs-heading-anchor" href="#Event-Fields">Event Fields</a><a id="Event-Fields-1"></a><a class="docs-heading-anchor-permalink" href="#Event-Fields" title="Permalink"></a></h3><table><tr><th style="text-align: right">Field</th><th style="text-align: right">Type</th><th style="text-align: right">Description</th><th style="text-align: right">Default</th></tr><tr><td style="text-align: right"><code>sender</code></td><td style="text-align: right"><code>Int</code></td><td style="text-align: right">ID of the event sender</td><td style="text-align: right">Required</td></tr><tr><td style="text-align: right"><code>receiver</code></td><td style="text-align: right"><code>Int</code></td><td style="text-align: right">ID of the event receiver</td><td style="text-align: right">Required</td></tr><tr><td style="text-align: right"><code>time</code></td><td style="text-align: right"><code>T</code></td><td style="text-align: right">Timestamp of the event</td><td style="text-align: right">Required</td></tr><tr><td style="text-align: right"><code>eventtype</code></td><td style="text-align: right"><code>Symbol</code></td><td style="text-align: right">Category of the event</td><td style="text-align: right"><code>:event</code></td></tr><tr><td style="text-align: right"><code>weight</code></td><td style="text-align: right"><code>Float64</code></td><td style="text-align: right">Weight/magnitude</td><td style="text-align: right"><code>1.0</code></td></tr></table><h3 id="Accessing-Event-Data"><a class="docs-heading-anchor" href="#Accessing-Event-Data">Accessing Event Data</a><a id="Accessing-Event-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Accessing-Event-Data" title="Permalink"></a></h3><pre><code class="language-julia hljs">e = Event(1, 2, 3.5; eventtype=:phone, weight=2.0)
+
+e.sender      # 1
+e.receiver    # 2
+e.time        # 3.5
+e.eventtype   # :phone
+e.weight      # 2.0</code></pre><h3 id="Timestamp-Types"><a class="docs-heading-anchor" href="#Timestamp-Types">Timestamp Types</a><a id="Timestamp-Types-1"></a><a class="docs-heading-anchor-permalink" href="#Timestamp-Types" title="Permalink"></a></h3><p>REM.jl supports various timestamp types:</p><pre><code class="language-julia hljs">using Dates
+
+# Numeric timestamps
+Event(1, 2, 1.0)                              # Float64
+Event(1, 2, 1)                                # Int
+
+# Calendar timestamps
+Event(1, 2, DateTime(2024, 1, 15, 10, 30))    # DateTime
+Event(1, 2, Date(2024, 1, 15))                # Date</code></pre><p>All events in a sequence must have the same timestamp type.</p><h2 id="Event-Sequences"><a class="docs-heading-anchor" href="#Event-Sequences">Event Sequences</a><a id="Event-Sequences-1"></a><a class="docs-heading-anchor-permalink" href="#Event-Sequences" title="Permalink"></a></h2><p>An <code>EventSequence</code> is a time-sorted collection of events:</p><pre><code class="language-julia hljs">events = [
+    Event(1, 2, 3.0),  # Not in chronological order...
+    Event(2, 1, 1.0),
+    Event(1, 3, 2.0),
+]
+seq = EventSequence(events)  # Automatically sorted by time
+
+# After sorting: times are [1.0, 2.0, 3.0]</code></pre><h3 id="Accessing-Sequence-Data"><a class="docs-heading-anchor" href="#Accessing-Sequence-Data">Accessing Sequence Data</a><a id="Accessing-Sequence-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Accessing-Sequence-Data" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Basic access
+seq[1]              # First event (earliest time)
+seq[end]            # Last event (latest time)
+length(seq)         # Number of events
+
+# Metadata
+seq.n_actors        # Number of unique actors
+seq.actors          # Set of actor IDs
+seq.eventtypes      # Set of event types
+
+# Iteration
+for event in seq
+    println(event.sender, &quot; → &quot;, event.receiver)
+end
+
+# Collect times
+times = [e.time for e in seq]</code></pre><h3 id="Adding-Events"><a class="docs-heading-anchor" href="#Adding-Events">Adding Events</a><a id="Adding-Events-1"></a><a class="docs-heading-anchor-permalink" href="#Adding-Events" title="Permalink"></a></h3><p>Events are inserted maintaining time order:</p><pre><code class="language-julia hljs"># Insert a new event
+push!(seq, Event(3, 1, 1.5))
+
+# The sequence remains sorted by time</code></pre><h3 id="Creating-Empty-Sequences"><a class="docs-heading-anchor" href="#Creating-Empty-Sequences">Creating Empty Sequences</a><a id="Creating-Empty-Sequences-1"></a><a class="docs-heading-anchor-permalink" href="#Creating-Empty-Sequences" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Empty sequence for Float64 timestamps
+seq = EventSequence{Float64}()
+
+# Add events incrementally
+push!(seq, Event(1, 2, 1.0))
+push!(seq, Event(2, 1, 2.0))</code></pre><h2 id="Loading-Data"><a class="docs-heading-anchor" href="#Loading-Data">Loading Data</a><a id="Loading-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Loading-Data" title="Permalink"></a></h2><h3 id="From-DataFrame"><a class="docs-heading-anchor" href="#From-DataFrame">From DataFrame</a><a id="From-DataFrame-1"></a><a class="docs-heading-anchor-permalink" href="#From-DataFrame" title="Permalink"></a></h3><p>The most common way to load events:</p><pre><code class="language-julia hljs">using DataFrames
+
+df = DataFrame(
+    sender = [1, 2, 1],
+    receiver = [2, 1, 3],
+    time = [1.0, 2.0, 3.0]
+)
+
+seq = load_events(df)</code></pre><h3 id="Custom-Column-Names"><a class="docs-heading-anchor" href="#Custom-Column-Names">Custom Column Names</a><a id="Custom-Column-Names-1"></a><a class="docs-heading-anchor-permalink" href="#Custom-Column-Names" title="Permalink"></a></h3><p>When your DataFrame has different column names:</p><pre><code class="language-julia hljs">df = DataFrame(
+    from = [1, 2, 1],
+    to = [2, 1, 3],
+    timestamp = [1.0, 2.0, 3.0],
+    type = [:email, :email, :meeting],
+    importance = [1.0, 2.0, 1.5]
+)
+
+seq = load_events(df;
+    sender_col = :from,
+    receiver_col = :to,
+    time_col = :timestamp,
+    type_col = :type,
+    weight_col = :importance
+)</code></pre><h3 id="String-Actor-Names"><a class="docs-heading-anchor" href="#String-Actor-Names">String Actor Names</a><a id="String-Actor-Names-1"></a><a class="docs-heading-anchor-permalink" href="#String-Actor-Names" title="Permalink"></a></h3><p>When actors are identified by names rather than numeric IDs:</p><pre><code class="language-julia hljs">df = DataFrame(
+    sender = [&quot;Alice&quot;, &quot;Bob&quot;, &quot;Alice&quot;, &quot;Carol&quot;],
+    receiver = [&quot;Bob&quot;, &quot;Alice&quot;, &quot;Carol&quot;, &quot;Bob&quot;],
+    time = [1.0, 2.0, 3.0, 4.0]
+)
+
+seq = load_events(df; actor_names=true)
+
+# Actors are assigned numeric IDs internally
+# Access the mapping through the returned sequence
+println(seq.n_actors)  # 3</code></pre><h3 id="The-bundled-event-stream"><a class="docs-heading-anchor" href="#The-bundled-event-stream">The bundled event stream</a><a id="The-bundled-event-stream-1"></a><a class="docs-heading-anchor-permalink" href="#The-bundled-event-stream" title="Permalink"></a></h3><p>Networks.jl ships a relational event stream to learn on: the World Trade Center police radio calls (Butts, Petrescu-Prahova &amp; Cross 2007), the running example of R&#39;s <code>relevent</code>. <code>load_dataset(:wtc_police_calls)</code> returns the 481 calls as a <code>481 × 3</code> matrix (event number, sender, receiver — in observed order, so the clock is ordinal and there are no tied times), the size of the actor universe (37, two of whom never call or are called) and the indicator of the three institutionalised coordinator roles:</p><pre><code class="language-julia hljs">using Networks, REM
+
+wtc = load_dataset(:wtc_police_calls)
+events = [Event(wtc.events[k, 2], wtc.events[k, 3], Float64(wtc.events[k, 1]))
+          for k in 1:size(wtc.events, 1)]
+seq = EventSequence(events; actors=ActorSet(1:wtc.n_actors))   # declare all 37
+icr = NodeAttribute(:icr, Dict(i =&gt; Float64(wtc.is_icr[i]) for i in 1:wtc.n_actors))
+seq                       # EventSequence{Float64}(481 events, 37 actors, declared universe)</code></pre><p>Use <code>Float64</code> times (as above): REM.jl accepts an <code>Int</code> clock too, but Relevent.jl&#39;s statistics run on a <code>Float64</code> one.</p><h3 id="From-CSV-File"><a class="docs-heading-anchor" href="#From-CSV-File">From CSV File</a><a id="From-CSV-File-1"></a><a class="docs-heading-anchor-permalink" href="#From-CSV-File" title="Permalink"></a></h3><p>Load directly from a CSV file:</p><pre><code class="language-julia hljs"># Write a small demo file first
+using CSV, DataFrames
+CSV.write(&quot;events.csv&quot;, DataFrame(sender=[1, 2, 1], receiver=[2, 1, 3],
+                                  time=[1.0, 2.0, 3.0]))
+
+# Basic usage
+seq = load_events(&quot;events.csv&quot;)</code></pre><p>Column names and actor-name handling are configurable:</p><p>&lt;!– skip-check –&gt;</p><pre><code class="language-julia hljs">seq = load_events(&quot;events.csv&quot;;
+    sender_col = :source,
+    receiver_col = :target,
+    time_col = :timestamp,
+    actor_names = true
+)</code></pre><h3 id="DateTime-Parsing"><a class="docs-heading-anchor" href="#DateTime-Parsing">DateTime Parsing</a><a id="DateTime-Parsing-1"></a><a class="docs-heading-anchor-permalink" href="#DateTime-Parsing" title="Permalink"></a></h3><p>For string timestamps that need parsing:</p><pre><code class="language-julia hljs">df = DataFrame(
+    sender = [1, 2, 1],
+    receiver = [2, 1, 3],
+    time = [&quot;2024-01-01T10:00:00&quot;, &quot;2024-01-01T11:00:00&quot;, &quot;2024-01-01T12:00:00&quot;]
+)
+
+seq = load_events(df; time_type=DateTime)</code></pre><h3 id="From-a-DynamicNetwork-(NetworkDynamic.jl)"><a class="docs-heading-anchor" href="#From-a-DynamicNetwork-(NetworkDynamic.jl)">From a DynamicNetwork (NetworkDynamic.jl)</a><a id="From-a-DynamicNetwork-(NetworkDynamic.jl)-1"></a><a class="docs-heading-anchor-permalink" href="#From-a-DynamicNetwork-(NetworkDynamic.jl)" title="Permalink"></a></h3><p>When NetworkDynamic.jl is loaded alongside REM.jl, a package extension provides <code>EventSequence(::DynamicNetwork)</code>: each edge activation spell becomes one event whose time is the spell&#39;s onset. This lets temporal network data flow straight into <code>generate_observations</code>/<code>fit_rem</code>:</p><pre><code class="language-julia hljs">using REM, NetworkDynamic   # loading both activates the extension
+
+# Six vertices, 24 edge-activation spells (a reciprocated, repeated pattern)
+dnet = DynamicNetwork(6; observation_start=0.0, observation_end=100.0)
+spells = [(1, 2, 1.0), (2, 3, 2.0), (2, 1, 3.0), (3, 1, 4.0), (1, 2, 6.0), (4, 2, 7.0),
+          (2, 4, 8.0), (1, 3, 9.0), (3, 2, 10.0), (2, 3, 11.0), (5, 1, 12.0), (1, 5, 13.0),
+          (2, 1, 14.0), (1, 2, 15.0), (4, 5, 16.0), (5, 4, 17.0), (3, 1, 18.0), (1, 3, 19.0),
+          (2, 4, 20.0), (6, 2, 21.0), (2, 6, 22.0), (1, 2, 23.0), (3, 2, 24.0), (2, 3, 25.0)]
+for (s, r, onset) in spells
+    activate!(dnet, onset, onset + 1.5; edge=(s, r))
+end
+
+dseq = EventSequence(dnet)        # EventSequence{Float64}(24 events, 6 actors, declared universe)
+dresult = fit_rem(dseq, [Repetition(), Reciprocity()]; n_controls=29)   # full risk set</code></pre><p>Options:</p><ul><li><p><code>eventtype=:onset</code>, <code>weight=1.0</code> — set on every generated event.</p></li><li><p><code>include_onset_censored=false</code> — onset-censored spells are skipped by default (their recorded onset is the observation-window start, not an observed event).</p></li><li><p><code>actors=nothing</code> — by default the actor universe is declared from the network&#39;s vertex set, so vertices with no edge spell stay in the risk set as isolates. Pass <code>actors</code> to override it.</p></li></ul><p>For undirected networks the smaller vertex ID becomes the sender (edges are stored with <code>(min, max)</code> ordering).</p><p>REM.jl depends on Networks.jl (the shared contracts, optimizer and presentation layer) but not on NetworkDynamic.jl: the method lives in the <code>REMNetworkDynamicExt</code> extension and is compiled only when NetworkDynamic.jl is present in the environment.</p><h2 id="Node-Attributes"><a class="docs-heading-anchor" href="#Node-Attributes">Node Attributes</a><a id="Node-Attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Node-Attributes" title="Permalink"></a></h2><p>Node attributes store actor-level covariates for use with attribute statistics.</p><h3 id="Creating-Attributes"><a class="docs-heading-anchor" href="#Creating-Attributes">Creating Attributes</a><a id="Creating-Attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Creating-Attributes" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Categorical attribute with default value
+gender = NodeAttribute(:gender,
+    Dict(1 =&gt; &quot;M&quot;, 2 =&gt; &quot;F&quot;, 3 =&gt; &quot;M&quot;),  # Actor ID → value
+    &quot;Unknown&quot;                             # Default for unspecified actors
+)
+
+# Numeric attribute
+age = NodeAttribute(:age,
+    Dict(1 =&gt; 25.0, 2 =&gt; 30.0, 3 =&gt; 28.0),
+    0.0  # Default
+)
+
+# Boolean attribute
+is_manager = NodeAttribute(:manager,
+    Dict(1 =&gt; true, 2 =&gt; false, 3 =&gt; true),
+    false
+)</code></pre><p>The third argument is the default an actor <strong>not in the dict</strong> reads as. It is optional, and leaving it out is the safer choice: a statistic that reads an actor a default-less attribute lacks throws an <code>ArgumentError</code> naming the attribute and the actor, instead of silently entering a fill value (a <code>0.0</code> that looks like data) into the model.</p><pre><code class="language-julia hljs">tenure = NodeAttribute(:tenure, Dict(1 =&gt; 5.0, 2 =&gt; 10.0, 3 =&gt; 3.0))   # no default
+has_default(tenure)     # false
+has_default(age)        # true</code></pre><h3 id="Accessing-Attribute-Values"><a class="docs-heading-anchor" href="#Accessing-Attribute-Values">Accessing Attribute Values</a><a id="Accessing-Attribute-Values-1"></a><a class="docs-heading-anchor-permalink" href="#Accessing-Attribute-Values" title="Permalink"></a></h3><pre><code class="language-julia hljs">gender[1]  # &quot;M&quot;
+gender[2]  # &quot;F&quot;
+gender[4]  # &quot;Unknown&quot; (default - actor 4 not in dict)
+
+age[1]     # 25.0
+age[99]    # 0.0 (default)
+tenure[1]  # 5.0
+try tenure[4] catch err; err isa ArgumentError end   # true: no value, no default</code></pre><h3 id="Modifying-Attributes"><a class="docs-heading-anchor" href="#Modifying-Attributes">Modifying Attributes</a><a id="Modifying-Attributes-1"></a><a class="docs-heading-anchor-permalink" href="#Modifying-Attributes" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Set a value
+age[4] = 35.0
+
+# Update existing
+age[1] = 26.0</code></pre><h3 id="Using-Attributes-in-Statistics"><a class="docs-heading-anchor" href="#Using-Attributes-in-Statistics">Using Attributes in Statistics</a><a id="Using-Attributes-in-Statistics-1"></a><a class="docs-heading-anchor-permalink" href="#Using-Attributes-in-Statistics" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Homophily: same gender
+AttributeMatch(gender)
+
+# Difference: age difference
+NodeDifference(age)
+
+# Main effects
+SenderAttribute(age)
+ReceiverAttribute(age)
+
+# Specific combinations
+ActorMix(gender, &quot;M&quot;, &quot;F&quot;)  # Male sender, female receiver</code></pre><h2 id="Actor-Sets"><a class="docs-heading-anchor" href="#Actor-Sets">Actor Sets</a><a id="Actor-Sets-1"></a><a class="docs-heading-anchor-permalink" href="#Actor-Sets" title="Permalink"></a></h2><p>For specifying custom sets of actors:</p><pre><code class="language-julia hljs"># From numeric IDs
+actors = ActorSet([1, 2, 3, 4, 5])
+
+# From names (creates ID mapping)
+actors = ActorSet([&quot;Alice&quot;, &quot;Bob&quot;, &quot;Carol&quot;, &quot;David&quot;])
+
+# Access mappings
+actors.name_to_id[&quot;Alice&quot;]  # 1
+actors.id_to_name[1]        # &quot;Alice&quot;
+actors.ids                   # [1, 2, 3, 4]
+
+# Check membership
+2 in actors   # true
+10 in actors  # false</code></pre><h2 id="Risk-Sets"><a class="docs-heading-anchor" href="#Risk-Sets">Risk Sets</a><a id="Risk-Sets-1"></a><a class="docs-heading-anchor-permalink" href="#Risk-Sets" title="Permalink"></a></h2><p>Risk sets define which dyads could potentially experience an event. This is used internally for case-control sampling.</p><pre><code class="language-julia hljs">rs = RiskSet(
+    5,                        # Index of focal event
+    [1, 2, 3],                # Potential senders
+    [1, 2, 3, 4];             # Potential receivers
+    exclude_self_loops = true # Exclude s == r (default: true)
+)
+
+# Number of dyads in risk set
+n_dyads(rs)  # 3*4 - 3 = 9 (excluding self-loops)
+rs           # RiskSet(event 5: 3 senders × 4 receivers, 9 dyads, self-loops excluded)</code></pre><h2 id="Working-with-Different-Time-Scales"><a class="docs-heading-anchor" href="#Working-with-Different-Time-Scales">Working with Different Time Scales</a><a id="Working-with-Different-Time-Scales-1"></a><a class="docs-heading-anchor-permalink" href="#Working-with-Different-Time-Scales" title="Permalink"></a></h2><h3 id="Numeric-Time"><a class="docs-heading-anchor" href="#Numeric-Time">Numeric Time</a><a id="Numeric-Time-1"></a><a class="docs-heading-anchor-permalink" href="#Numeric-Time" title="Permalink"></a></h3><p>For abstract time units:</p><pre><code class="language-julia hljs">events = [
+    Event(1, 2, 0.0),
+    Event(2, 1, 1.0),
+    Event(1, 2, 2.5),
+]
+seq = EventSequence(events)
+
+# Decay with numeric halflife
+decay = halflife_to_decay(10.0)  # Half weight after 10 time units</code></pre><h3 id="DateTime"><a class="docs-heading-anchor" href="#DateTime">DateTime</a><a id="DateTime-1"></a><a class="docs-heading-anchor-permalink" href="#DateTime" title="Permalink"></a></h3><p>For real calendar time:</p><pre><code class="language-julia hljs">using Dates
+
+events = [
+    Event(1, 2, DateTime(2024, 1, 1, 9, 0)),   # 9:00 AM
+    Event(2, 1, DateTime(2024, 1, 1, 10, 30)), # 10:30 AM
+    Event(1, 3, DateTime(2024, 1, 1, 14, 0)),  # 2:00 PM
+]
+seq = EventSequence(events)
+
+# Decay: halflife of 1 hour = 3600 seconds
+decay = halflife_to_decay(3600.0)
+state = EventNetworkState(seq; decay=decay)</code></pre><h3 id="Date"><a class="docs-heading-anchor" href="#Date">Date</a><a id="Date-1"></a><a class="docs-heading-anchor-permalink" href="#Date" title="Permalink"></a></h3><p>For daily granularity:</p><pre><code class="language-julia hljs">using Dates
+
+events = [
+    Event(1, 2, Date(2024, 1, 1)),
+    Event(2, 1, Date(2024, 1, 8)),   # One week later
+    Event(1, 3, Date(2024, 1, 15)),  # Two weeks later
+]
+seq = EventSequence(events)
+
+# Decay: halflife of 7 days = 7 * 86400 seconds
+decay = halflife_to_decay(7.0 * 86400)</code></pre><h2 id="Data-Validation"><a class="docs-heading-anchor" href="#Data-Validation">Data Validation</a><a id="Data-Validation-1"></a><a class="docs-heading-anchor-permalink" href="#Data-Validation" title="Permalink"></a></h2><h3 id="Self-Loops"><a class="docs-heading-anchor" href="#Self-Loops">Self-Loops</a><a id="Self-Loops-1"></a><a class="docs-heading-anchor-permalink" href="#Self-Loops" title="Permalink"></a></h3><p>An event whose sender equals its receiver is accepted by <code>Event</code> and <code>EventSequence</code> silently (since 0.2 — no warning), because a sequence is data, not a model:</p><pre><code class="language-julia hljs">e = Event(1, 1, 1.0)  # allowed</code></pre><p>The <em>model</em> is where self-loops are decided. By default the risk set excludes them (<code>exclude_self_loops=true</code> on <code>fit_rem</code>, <code>generate_observations</code> and <code>CaseControlSampler</code>): <code>i→i</code> is never drawn as a control — and a self-loop <strong>event</strong> is then refused at fit time, because a case must be a member of its own risk set, with an error that names the event and the keyword:</p><pre><code class="language-julia hljs">loop = EventSequence([Event(1, 1, 1.0), Event(1, 2, 2.0), Event(2, 3, 3.0)]; actors=ActorSet(1:3))
+err = try fit_rem(loop, [Repetition()]) catch e; e end
+occursin(&quot;Event 1 is a self-loop (1 → 1)&quot;, err.msg)      # true
+occursin(&quot;exclude_self_loops=false&quot;, err.msg)             # true</code></pre><p>Either drop self-loop events from the data:</p><pre><code class="language-julia hljs">raw_events = [Event(1, 2, 1.0), Event(2, 2, 2.0), Event(2, 3, 3.0)]
+events = [e for e in raw_events if e.sender != e.receiver]
+seq = EventSequence(events; actors=ActorSet(1:3))</code></pre><p>or, when a loop is a real event in your process (a self-assignment, a note to self), admit <code>i→i</code> dyads as cases <em>and</em> controls:</p><pre><code class="language-julia hljs">loops = EventSequence([Event(1, 1, 1.0), Event(1, 2, 2.0), Event(1, 1, 3.0), Event(2, 3, 4.0)];
+                      actors=ActorSet(1:3))
+admitted = fit_rem(loops, [Repetition()]; exclude_self_loops=false, n_controls=8)
+risk_set_sizes(admitted)                                  # [9, 9, 9, 9] — all 3·3 dyads, loops included</code></pre><h3 id="Missing-Data"><a class="docs-heading-anchor" href="#Missing-Data">Missing Data</a><a id="Missing-Data-1"></a><a class="docs-heading-anchor-permalink" href="#Missing-Data" title="Permalink"></a></h3><p>For DataFrames with missing values:</p><pre><code class="language-julia hljs">df = DataFrame(sender=[1, 2, missing], receiver=[2, 1, 3],
+               time=[1.0, 2.0, 3.0])
+
+# Filter rows with missing values before loading
+df_clean = dropmissing(df, [:sender, :receiver, :time])
+seq = load_events(df_clean)</code></pre><h3 id="Duplicate-Events"><a class="docs-heading-anchor" href="#Duplicate-Events">Duplicate Events</a><a id="Duplicate-Events-1"></a><a class="docs-heading-anchor-permalink" href="#Duplicate-Events" title="Permalink"></a></h3><p>Events at the exact same time between the same actors are allowed but may affect some statistics:</p><pre><code class="language-julia hljs">events = [
+    Event(1, 2, 1.0),
+    Event(1, 2, 1.0),  # Duplicate - both are included
+]
+seq = EventSequence(events)
+length(seq)  # 2</code></pre><h2 id="Utility-Functions"><a class="docs-heading-anchor" href="#Utility-Functions">Utility Functions</a><a id="Utility-Functions-1"></a><a class="docs-heading-anchor-permalink" href="#Utility-Functions" title="Permalink"></a></h2><h3 id="Time-Conversions"><a class="docs-heading-anchor" href="#Time-Conversions">Time Conversions</a><a id="Time-Conversions-1"></a><a class="docs-heading-anchor-permalink" href="#Time-Conversions" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Convert halflife to decay rate
+decay = halflife_to_decay(10.0)  # λ such that weight = 0.5 at t = 10
+
+# Convert back
+halflife = decay_to_halflife(decay)
+
+# Compute decay weight for an elapsed time of 5 units (elapsed time first)
+weight = compute_decay_weight(5.0, decay)</code></pre><h3 id="Sequence-Statistics"><a class="docs-heading-anchor" href="#Sequence-Statistics">Sequence Statistics</a><a id="Sequence-Statistics-1"></a><a class="docs-heading-anchor-permalink" href="#Sequence-Statistics" title="Permalink"></a></h3><pre><code class="language-julia hljs"># Time span
+first_time = seq[1].time
+last_time = seq[end].time
+duration = last_time - first_time
+
+# Event counts by actor
+using StatsBase
+senders = [e.sender for e in seq]
+sender_counts = countmap(senders)
+
+# Unique dyads
+dyads = Set((e.sender, e.receiver) for e in seq)
+n_unique_dyads = length(dyads)</code></pre></article><nav class="docs-footer"><a class="docs-footer-prevpage" href="../../getting_started/">« Getting Started</a><a class="docs-footer-nextpage" href="../statistics/">Statistics »</a><div class="flexbox-break"></div><p class="footer-message"><a href="/">Ecosystem home</a> · <a href="/packages/">Packages</a> · <a href="/getting-started/">Get started</a> · <a href="/capabilities/">Capabilities</a> — Built with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a>.</p></nav></div><div class="modal" id="documenter-settings"><div class="modal-background"></div><div class="modal-card"><header class="modal-card-head"><p class="modal-card-title">Settings</p><button class="delete"></button></header><section class="modal-card-body"><p><label class="label">Theme</label><div class="select"><select id="documenter-themepicker"><option value="auto">Automatic (OS)</option><option value="documenter-light">documenter-light</option><option value="documenter-dark">documenter-dark</option><option value="catppuccin-latte">catppuccin-latte</option><option value="catppuccin-frappe">catppuccin-frappe</option><option value="catppuccin-macchiato">catppuccin-macchiato</option><option value="catppuccin-mocha">catppuccin-mocha</option></select></div></p><hr/><p>This document was generated with <a href="https://github.com/JuliaDocs/Documenter.jl">Documenter.jl</a> version 1.19.0 on <span class="colophon-date" title="Monday 14 September 2026 22:53">Monday 14 September 2026</span>. Using Julia version 1.13.0.</p></section><footer class="modal-card-foot"></footer></div></div></div></body></html>
