@@ -695,6 +695,8 @@ StatsAPI/presentation conventions.
 
 ### Fixed
 
+- The full-risk-set covariance test checks identical replicate coefficients and
+  permits only floating-point centering roundoff in their reported spread.
 - **`EventSequence(::DynamicNetwork)` silently converted masked dyads.** An
   `Event` is an instant and cannot record that a dyad is *unobserved*, so an
   unobserved dyad became a never-happened non-event — which biases a likelihood

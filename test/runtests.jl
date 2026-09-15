@@ -1889,9 +1889,13 @@ end
         @test control_draw_cov(seq, stats; n_controls=5, n_draws=40, rng=MersenneTwister(9)).cov == draws.cov
         @test control_draw_cov(seq, stats; n_controls=5, n_draws=40, rng=MersenneTwister(10)).cov != draws.cov
         # it is a property of the sampling design: with the full risk set every
-        # "draw" is the same design and the spread is exactly zero
-        @test all(==(0.0), control_draw_cov(seq, stats; n_controls=200, n_draws=3,
-                                            rng=MersenneTwister(1)).sd)
+        # "draw" is the same design. Repeated coefficients must be identical;
+        # covariance centering can still leave a rounding-sized residual.
+        full_draws = control_draw_cov(seq, stats; n_controls=200, n_draws=3,
+                                      rng=MersenneTwister(1))
+        @test all(row -> row == full_draws.replicates[1, :],
+                  eachrow(full_draws.replicates))
+        @test all(full_draws.sd .<= eps.(max.(abs.(full_draws.mean), 1.0)))
         # it is NOT a standard error: nothing on a REMResult is it, and it is
         # never combined with the Hessian — `vcov(hess)` is the inverse
         # information, full stop
