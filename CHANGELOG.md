@@ -695,6 +695,14 @@ StatsAPI/presentation conventions.
 
 ### Fixed
 
+- Center covariates within each conditional-logit stratum before evaluating
+  the likelihood, derivatives and sandwich scores. A statistic constant within
+  every risk set now has exactly zero information on every platform, avoiding
+  roundoff that could falsely report separation or finite uncertainty. Form
+  covariance from mean-centered rows and compensate its sum across strata to
+  preserve collinear directions. Regression tests cover large stratum offsets
+  and Efron denominator weights; the kernel retains its zero-allocation contract.
+
 - The full-risk-set covariance test checks identical replicate coefficients and
   permits only floating-point centering roundoff in their reported spread.
 - **`EventSequence(::DynamicNetwork)` silently converted masked dyads.** An

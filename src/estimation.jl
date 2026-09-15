@@ -1171,7 +1171,25 @@ function _clogit_workspace(idx::_StrataIndex, p::Int)
         eta = Vector{Float64}(undef, max_ns),        # linear predictor
         probs = Vector{Float64}(undef, max_ns),      # softmax probabilities
         xexp = Vector{Float64}(undef, p),            # E[X] within stratum
+        hess_s = Matrix{Float64}(undef, p, p),       # stratum Hessian
+        hess_c = Matrix{Float64}(undef, p, p),       # summation correction
     )
+end
+
+# A common covariate shift within a stratum cancels from its conditional
+# likelihood, including weighted Efron denominators. Center on the case before
+# taking moments: a constant column then has exactly zero score and curvature,
+# instead of cancellation noise that can masquerade as identifiable information.
+@inline function _center_stratum!(work, X::Matrix{Float64}, idx::_StrataIndex,
+                                  s::Int)
+    lo = idx.offsets[s]
+    n_s = idx.offsets[s + 1] - lo
+    case_row = idx.order[lo + idx.case[s] - 1]
+    X_s = view(work.Xs, 1:n_s, :)
+    @inbounds for k in axes(X, 2), a in 1:n_s
+        X_s[a, k] = X[idx.order[lo + a - 1], k] - X[case_row, k]
+    end
+    return X_s
 end
 
 """
@@ -1181,10 +1199,11 @@ The per-stratum softmax kernel of the stratified conditional logit: overwrites
 `grad` and `hess` with the gradient and Hessian of the log partial likelihood at
 `beta` and returns its value. **Allocation-free** after warm-up (pinned by the
 "Allocation-free clogit kernel" testset): every buffer lives in `work`
-(`_clogit_workspace`), the Hessian is accumulated in place via BLAS (gemm on
-sqrt-probability-weighted stratum rows for `−E[XXᵀ]`, `ger!` for the
-`+E[X]E[X]ᵀ` rank-1 update) — no per-row `x·xᵀ` outer products, no per-stratum
-vectors.
+(`_clogit_workspace`). BLAS forms each stratum's negative covariance from
+sqrt-probability-weighted, mean-centered rows; compensated summation combines
+the stratum Hessians. There are no per-row outer products or per-stratum
+allocations. Covariates are first centered on the case before the softmax and
+moment calculations, preserving exact zeros for constant columns.
 
 `tw` holds the per-row DENOMINATOR weights (`tie_weight`): the stratum's
 normalizing sum is `Σ_a tw_a·exp(η_a)`, while the numerator stays `exp(η_case)`.
@@ -1199,6 +1218,7 @@ function _clogit_derivatives!(grad::Vector{Float64}, hess::Matrix{Float64},
     p = size(X, 2)
     fill!(grad, 0.0)
     fill!(hess, 0.0)
+    fill!(work.hess_c, 0.0)
     # The log-likelihood is a sum over strata whose partial sums reach the
     # hundreds while a Newton step near the optimum improves it by ~1e-13:
     # accumulate it with Neumaier (compensated) summation, so that the value
@@ -1216,11 +1236,7 @@ function _clogit_derivatives!(grad::Vector{Float64}, hess::Matrix{Float64},
         lo = offsets[s]
         n_s = offsets[s + 1] - lo
 
-        # Copy the stratum rows into the contiguous work buffer
-        X_s = view(work.Xs, 1:n_s, :)
-        for k in 1:p, a in 1:n_s
-            X_s[a, k] = X[order[lo + a - 1], k]
-        end
+        X_s = _center_stratum!(work, X, idx, s)
 
         # Linear predictor
         eta = view(work.eta, 1:n_s)
@@ -1250,16 +1266,23 @@ function _clogit_derivatives!(grad::Vector{Float64}, hess::Matrix{Float64},
             grad[k] += X_s[case_pos, k] - xexp[k]
         end
 
-        # Hessian contribution: -Var[X] = -(E[XX'] - E[X]E[X]')
+        # Form -Var[X] from centered rows, avoiding the subtraction of two
+        # large moments. Compensate the sum across strata so accumulated
+        # rounding cannot manufacture curvature along a collinear direction.
         Xw = view(work.Xw, 1:n_s, :)
         for a in 1:n_s
             probs[a] = sqrt(probs[a])
         end
         for k in 1:p, a in 1:n_s
-            Xw[a, k] = probs[a] * X_s[a, k]
+            Xw[a, k] = probs[a] * (X_s[a, k] - xexp[k])
         end
-        mul!(hess, transpose(Xw), Xw, -1.0, 1.0)
-        BLAS.ger!(1.0, xexp, xexp, hess)
+        mul!(work.hess_s, transpose(Xw), Xw, -1.0, 0.0)
+        for k in 1:p, j in 1:p
+            increment = work.hess_s[j, k] - work.hess_c[j, k]
+            updated = hess[j, k] + increment
+            work.hess_c[j, k] = (updated - hess[j, k]) - increment
+            hess[j, k] = updated
+        end
     end
 
     return ll + ll_c
@@ -1472,15 +1495,9 @@ function _clogit_sandwich_cov(X::Matrix{Float64}, idx::_StrataIndex,
         # Softmax probabilities within the stratum (same log-sum-exp, and the
         # same denominator weights, as the likelihood — so the score cannot
         # drift from the model it scores)
+        X_s = _center_stratum!(work, X, idx, s)
         eta = view(work.eta, 1:n_s)
-        for a in 1:n_s
-            row = order[lo + a - 1]
-            acc = 0.0
-            for k in 1:p
-                acc += X[row, k] * beta[k]
-            end
-            eta[a] = acc
-        end
+        mul!(eta, X_s, beta)
         eta_max = maximum(eta)
         probs = view(work.probs, 1:n_s)
         total = 0.0
@@ -1491,13 +1508,9 @@ function _clogit_sandwich_cov(X::Matrix{Float64}, idx::_StrataIndex,
         probs ./= total
 
         # E[X] within the stratum, then the score u_e = x_case − E[X]
-        fill!(xexp, 0.0)
-        for a in 1:n_s, k in 1:p
-            xexp[k] += probs[a] * X[order[lo + a - 1], k]
-        end
-        case_row = order[lo + case_pos - 1]
+        mul!(xexp, transpose(X_s), probs)
         for k in 1:p
-            u[k] = X[case_row, k] - xexp[k]
+            u[k] = X_s[case_pos, k] - xexp[k]
         end
 
         BLAS.ger!(1.0, u, u, meat)

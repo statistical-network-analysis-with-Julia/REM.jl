@@ -1432,6 +1432,34 @@ end
         @test_throws ArgumentError REM._strata_index(strata, y[1:5])
     end
 
+    @testset "Conditional likelihood ignores within-stratum covariate shifts" begin
+        # Interleaved strata, cases away from the first row, and a stratum
+        # without a case. Column 3 varies between strata but is unidentifiable
+        # within each. Integer covariates preserve their contrasts exactly
+        # when shifted by large, exactly representable powers of two.
+        X = [0.0 1 2; 2 -1 -3; 1 2 2; 0 0 -3; -1 0 2; 1 1 -3; 99 99 99]
+        strata = [7, 1000, 7, 1000, 7, 1000, 4]
+        y = [false, false, true, false, false, true, false]
+        shifted = X .+ [s == 7 ? 2.0^40 : -2.0^40 for s in strata] * [1.0 -2.0 3.0]
+        idx = REM._strata_index(strata, y)
+        work = REM._clogit_workspace(idx, 3)
+        β = [0.2, -0.3, 0.7]
+        bread = Matrix{Float64}(LinearAlgebra.I, 3, 3)
+        for tw in (ones(7), [1.0, 0.5, 0.75, 1.0, 0.5, 0.75, 1.0])
+            ll, grad, hess = REM._clogit_objective(X, idx, work, tw)(β)
+            sand = REM._clogit_sandwich_cov(X, idx, β, bread, tw, work)
+            ll_shift, grad_shift, hess_shift = REM._clogit_objective(shifted, idx, work, tw)(β)
+            sand_shift = REM._clogit_sandwich_cov(shifted, idx, β, bread, tw, work)
+            @test ll_shift == ll
+            @test grad_shift == grad
+            @test hess_shift == hess
+            @test sand_shift == sand
+            @test grad[3] == 0.0
+            @test all(iszero, hess[3, :]) && all(iszero, hess[:, 3])
+            @test all(iszero, sand[3, :]) && all(iszero, sand[:, 3])
+        end
+    end
+
     @testset "Streams in O(events): generate_observations allocation pins" begin
         # The per-event cost must not carry the actor universe: the old
         # `n_dyads` built two Sets of every actor per event (139 KB/event at

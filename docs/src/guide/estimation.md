@@ -624,6 +624,12 @@ short.converged                     # true
 | Sparse data | Non-convergence | warns, `converged == false` | Increase n_controls, simplify model |
 | Too many parameters | Slow convergence | — | Reduce model complexity |
 
+A statistic that is constant across all candidate dyads within every event's
+risk set cannot be estimated, even if it changes between events. It contributes
+zero information and is reported in `singular_suspects`; remove it from the model.
+Adding a common covariate offset within an event's risk set leaves the conditional
+likelihood and its standard errors unchanged.
+
 Singular information makes the shared optimizer return `converged=false` and
 undefined uncertainty, even when the objective has stopped changing. Separation
 can still satisfy the objective stopping rule with `converged=true`. The package
