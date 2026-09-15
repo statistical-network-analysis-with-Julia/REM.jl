@@ -629,6 +629,8 @@ risk set cannot be estimated, even if it changes between events. It contributes
 zero information and is reported in `singular_suspects`; remove it from the model.
 Adding a common covariate offset within an event's risk set leaves the conditional
 likelihood and its standard errors unchanged.
+The numerical rank check accounts for the number of rows in the largest risk
+set, so rounding in long covariance sums cannot identify a collinear statistic.
 
 Singular information makes the shared optimizer return `converged=false` and
 undefined uncertainty, even when the objective has stopped changing. Separation

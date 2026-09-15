@@ -1349,7 +1349,13 @@ function _fit_stratified_clogit(X::Matrix{Float64}, y::AbstractVector{Bool},
     # The ONE Newton–Raphson of the ecosystem: step halving, the combined
     # |Δll| / gradient-norm stopping rule, and the Cholesky-based covariance
     # (NaN + warning when −H is not positive definite) all live there
-    fit = newton_fit(objective, zeros(p); maxiter=maxiter, tol=tol)
+    # Each stratum covariance contains dot products of up to max_size rows.
+    # Their rounding error can exceed the p-dimensional eigensolve's default
+    # tolerance, even with compensated accumulation across strata. Tell the
+    # shared rank guard the precision of this assembled information matrix.
+    information_rtol = max(p, idx.max_size) * eps(Float64)
+    fit = newton_fit(objective, zeros(p); maxiter=maxiter, tol=tol,
+                     information_rtol=information_rtol)
 
     info_cov = fit.vcov                       # inverse observed information
     var_cov = se === :sandwich ?
