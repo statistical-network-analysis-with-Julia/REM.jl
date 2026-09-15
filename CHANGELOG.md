@@ -613,6 +613,8 @@ StatsAPI/presentation conventions.
 
 ### Changed
 
+- Documentation uses the default Documenter themes, with a new package-specific
+  SVG icon and browser favicon in the official Julia logo colors.
 - **`benchmark/Project.toml` sources Networks at `../../Networks.jl`** (panel
   2026-09, item 7). It said `../Networks.jl` — one `../` short, resolved from
   `benchmark/` — and survived only on a gitignored `Manifest.toml` that still
