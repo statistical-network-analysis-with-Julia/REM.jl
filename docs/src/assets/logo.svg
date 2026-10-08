@@ -1,0 +1,9 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="256" height="256" viewBox="0 0 256 256" role="img" aria-labelledby="title desc">
+  <title id="title">REM.jl</title>
+  <desc id="desc">A directed interaction with an event pulse: who acts toward whom in a relational event.</desc>
+  <path d="M52 132H83M168 132H194" fill="none" stroke="#4063D8" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M178 114 196 132 178 150" fill="none" stroke="#4063D8" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
+  <path d="M139 43 96 139h31l-11 74 49-105h-32Z" fill="#9558B2"/>
+  <circle cx="36" cy="132" r="22" fill="#CB3C33"/>
+  <circle cx="220" cy="132" r="22" fill="#389826"/>
+</svg>
